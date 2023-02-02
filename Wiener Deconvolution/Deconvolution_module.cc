@@ -215,17 +215,7 @@ namespace opdet {
       fSinglePEWaveform = SinglePEVec_x;
       fSinglePEWaveform.resize(fSamples, 0);
 
-      // Create a new histogram
-      TH1D *waveformH = tfs->make< TH1D>("SPE","",fSinglePEWaveform.size(),0, fSinglePEWaveform.size()/fSampleFreq);  //3751, 0,0.000006
-      
-      // Copy values from the waveform into the histogram
-      for (size_t tick = 0;tick < fSinglePEWaveform.size(); ++tick){
-           waveformH->SetBinContent(tick + 1, fSinglePEWaveform[tick]);
-        }
-      waveformH->Draw();
-            
       double*xh = new double[fSamples];
-      // double Pbinsx = waveformH->GetNbinsX();  //THis variable need define in fhcl with name pretrigger in ticks
       for (int i=0; i< fSamples; i++) {
       xh[i] = fSinglePEWaveform[i];
           
@@ -236,8 +226,7 @@ namespace opdet {
      //****************************** 
           
      std::vector<raw::OpDetWaveform> digi_wave = *wfHandle;
-     //digi_wave.reserve(fSamples);
-          
+              
      //pointer that will store produced Waveform
      auto out_wave = std::make_unique< std::vector< raw::OpDetWaveform > >();
      auto out_decowave = std::make_unique< std::vector< recob::OpWaveform > >();
@@ -274,14 +263,13 @@ namespace opdet {
      //--Original Signal---
      //******************************  
      std::vector<double>xs(fSamples,0.);
-     //xs[0] = 1.0; //delta function 1
      //ST profile 
      // auto const *Larprop = lar::providerFrom<detinfo::LArPropertiesService>();
-      //*double FastTime = Larprop->ScintYieldRatio()/(Larprop->ScintFastTimeConst()* 0.001); 
-      //*double SlowTime = (1.-Larprop->ScintYieldRatio())/(Larprop->ScintSlowTimeConst()* 0.001); 
-      //xs = {FastTime, SlowTime};   //in us
-     // *std::vector<double>SignalTime={(Larprop->ScintFastTimeConst()* 0.001),(Larprop->ScintSlowTimeConst()* 0.001)};
-      //*std::vector<double>SignalScint={Larprop->ScintYieldRatio(),1.-Larprop->ScintYieldRatio()};
+      double FastTime = Larprop->ScintYieldRatio()/(Larprop->ScintFastTimeConst()* 0.001); 
+      double SlowTime = (1.-Larprop->ScintYieldRatio())/(Larprop->ScintSlowTimeConst()* 0.001); 
+      xs = {FastTime, SlowTime};   //in us
+     std::vector<double>SignalTime={(Larprop->ScintFastTimeConst()* 0.001),(Larprop->ScintSlowTimeConst()* 0.001)};
+     std::vector<double>SignalScint={Larprop->ScintYieldRatio(),1.-Larprop->ScintYieldRatio()};
 
      //******************************
      //--Noise---

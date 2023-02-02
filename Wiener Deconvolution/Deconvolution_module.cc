@@ -264,7 +264,7 @@ namespace opdet {
      //******************************  
      std::vector<double>xs(fSamples,0.);
      //ST profile 
-     // auto const *Larprop = lar::providerFrom<detinfo::LArPropertiesService>();
+      auto const *Larprop = lar::providerFrom<detinfo::LArPropertiesService>();
       double FastTime = Larprop->ScintYieldRatio()/(Larprop->ScintFastTimeConst()* 0.001); 
       double SlowTime = (1.-Larprop->ScintYieldRatio())/(Larprop->ScintSlowTimeConst()* 0.001); 
       xs = {FastTime, SlowTime};   //in us

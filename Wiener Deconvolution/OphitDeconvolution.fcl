@@ -1,0 +1,27 @@
+
+BEGIN_PROLOG
+
+ standard_ophit_deconvolution:
+   {
+     module_type:    "OphitDeconvolution"
+     InputModule:    "DigitizerSPE"
+     InstanceName:        "" 
+     
+     
+     
+     LineNoiseRMS:         3       # Pedestal RMS in ADC counts, likely an underestimate
+     TimeBegin:            0       # In us 
+     TimeEnd:              16      # In us 
+     PreTrigger:           120     # In ticks 25 (scint) 160 gauss
+     ReadoutWindow:        1000    # In ticks
+     Pedestal:             1500    # in ADC counts
+     fSamples:             699
+     Scale:                0.0079  #(0.0632/8)//*0.09244;scint-9.244/100=*0.09244 true=0.0632 false=0.244                      
+     DigiDataFile:         "/dune/data2/users/jdelgadg/fbk_decon.txt"    
+     WienerFilter:         true    # false for Gauss Filter, true Wiener Filter
+     
+         
+  
+    }
+
+  END_PROLOG

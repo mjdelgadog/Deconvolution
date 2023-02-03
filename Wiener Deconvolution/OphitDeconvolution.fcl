@@ -12,7 +12,7 @@ BEGIN_PROLOG
      LineNoiseRMS:         3       # Pedestal RMS in ADC counts, likely an underestimate
      TimeBegin:            0       # In us 
      TimeEnd:              16      # In us 
-     PreTrigger:           120     # In ticks 25 (scint) 160 gauss
+     PreTrigger:           30     # In ticks 25 (scint) 160 gauss
      ReadoutWindow:        1000    # In ticks
      Pedestal:             1500    # in ADC counts
      fSamples:             699

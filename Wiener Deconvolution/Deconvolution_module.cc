@@ -126,6 +126,8 @@ namespace opdet {
         double ScintResolutionScale;  
         double fScale;
         int fSamples;
+        bool WienerFilter;
+        bool GaussFilter;
         //----------------------------------------------------
         // Declare member functions
         std::vector<raw::OpDetWaveform> RunDeconvolution(std::vector<raw::OpDetWaveform> const& wfHandle);
@@ -167,6 +169,8 @@ namespace opdet {
         fDigiDataFile         = pset.get< std::string >("DigiDataFile");
         fSamples              = pset.get< int >("fSamples");
         fScale                = pset.get< double >("Scale");
+        WienerFilter          = pset.get< bool   >("WienerFilter");
+        GaussFilter           = pset.get< bool   >("GaussFilter");
         WfDeco=0;  
       
      // auto const *LarProp = lar::providerFrom<detinfo::LArPropertiesService>();
@@ -264,10 +268,7 @@ namespace opdet {
      //******************************  
      std::vector<double>xs(fSamples,0.);
      //ST profile 
-     // auto const *Larprop = lar::providerFrom<detinfo::LArPropertiesService>();
-      double FastTime = Larprop->ScintYieldRatio()/(Larprop->ScintFastTimeConst()* 0.001); 
-      double SlowTime = (1.-Larprop->ScintYieldRatio())/(Larprop->ScintSlowTimeConst()* 0.001); 
-      xs = {FastTime, SlowTime};   //in us
+     auto const *Larprop = lar::providerFrom<detinfo::LArPropertiesService>();
      std::vector<double>SignalTime={(Larprop->ScintFastTimeConst()* 0.001),(Larprop->ScintSlowTimeConst()* 0.001)};
      std::vector<double>SignalScint={Larprop->ScintYieldRatio(),1.-Larprop->ScintYieldRatio()};
 
@@ -292,11 +293,11 @@ namespace opdet {
      for (int i=0; i < fSamples; i++) {     
        xs[i] = SPE_Max*TMath::Gaus(i, 8, 0.1,true);//0.09//gauss function  
        //NEW Definition 
-       /*double lightsignal=0;
+       double lightsignal=0;
        for (size_t j=0; j<SignalTime.size();j++){
        lightsignal+=SignalScint[j]*exp(-t/SignalTime[j]);
        }
-       xs[i] = lightsignal; */
+       xs[i] = lightsignal; 
        xt[i] = t;
        xn[i] = CLHEP::RandGauss::shoot(fPedestal, fLineNoiseRMS);//gRandom->Gaus(0, fLineNoiseRMS);//white noise  (0, hNoiseAmpl->GetRMS())
        t+=dt;
@@ -355,6 +356,12 @@ namespace opdet {
       double*H2 =new double[fSamples];   //spe response spectral density
       double*S2 =new double[fSamples];   //original signal spectral density
       double*N2 =new double[fSamples];   // noise spectral density 
+      
+    //******************************
+    // Compute filters.
+    //******************************
+        
+     if (WienerFilter){ 
                                           
       for (int i=0; i<fSamples*0.5+1; i++) {
     // fill FFT arrays
@@ -382,9 +389,15 @@ namespace opdet {
       fft->Transform();
       xy = fft->GetPointsReal();
       for (int i=0; i<fSamples; i++){ 
-         //xy[i] *= fSamples;
-       out_recowave[i] = xy[i]*fScale;
+        out_recowave[i] = xy[i]*fScale;
       }
+    }
+    else if (GaussFilter){ 
+    
+    }
+    else{
+    
+    }
     
     raw::OpDetWaveform dgwave( wf.TimeStamp(), wf.ChannelNumber(), out_digiwave );
     out_wave->emplace_back(std::move(dgwave));

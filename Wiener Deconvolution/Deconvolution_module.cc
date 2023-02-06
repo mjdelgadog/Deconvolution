@@ -291,7 +291,7 @@ namespace opdet {
       double* xt = new double[fSamples];      
 
      for (int i=0; i < fSamples; i++) {     
-       xs[i] = SPE_Max*TMath::Gaus(i, 8, 0.1,true);//0.09//gauss function  
+       //xs[i] = SPE_Max*TMath::Gaus(i, 8, 0.1,true);//0.09//gauss function  
        //NEW Definition 
        double lightsignal=0;
        for (size_t j=0; j<SignalTime.size();j++){

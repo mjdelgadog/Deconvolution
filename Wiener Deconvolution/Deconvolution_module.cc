@@ -218,34 +218,37 @@ namespace opdet {
         //****************************** 
           
         std::vector<raw::OpDetWaveform> digi_wave = *wfHandle;
-              
+        int NOpDetWaveform = digi_wave.size();
+        std::cout << NOpDetWaveform << std::endl;
+
         //pointer that will store produced Waveform
         auto out_wave = std::make_unique< std::vector< raw::OpDetWaveform > >();
         auto out_decowave = std::make_unique< std::vector< recob::OpWaveform > >();
 
-        std::vector<short unsigned int > out_digiwave(fSamples); //vector in which the waveform will be saved
-        std::vector<float> out_recowave(fSamples); //vector in which the decowaveform will be saved, using float
+        std::vector<short unsigned int > out_digiwave(NOpDetWaveform); //vector in which the waveform will be saved
+        std::vector<float> out_recowave(NOpDetWaveform);               //vector in which the decowaveform will be saved, using float
         double*xv = new double[fSamples]; 
      
-        for (auto const& wf: digi_wave){
-     
-            //Loop through the waveforms
-            for (Int_t i= 0; i<fSamples; i++){
-                out_recowave[i] = (wf[i]-fPedestal);  
-                xv[i] = out_recowave[i];
-            }
-     
-            if (static_cast<int>(wf.Waveform().size()) <= fSamples) {
+        for (auto const& wf: digi_wave) {
+            
+            // Resize wvfs
+            if (static_cast<int>(wf.Waveform().size()) <= fSamples) { 
                 out_recowave.resize(fSamples,0); 
-                for (Int_t i = wf.Waveform().size(); i<fSamples; i++) 
-                out_recowave[i] = CLHEP::RandGauss::shoot(fPedestal, fLineNoiseRMS); 
-            } 
+            }
+
             else {
                 printf("\nWARNING: waveform size is %lu, which is larger than fSamples (%i)\n", 
                 wf.Waveform().size(), fSamples); 
                 out_recowave.resize(fSamples); 
             }
-                
+
+            //Loop through the waveforms
+            for (Int_t i= 0; i < fSamples; i++){
+                if (i < static_cast<int>(wf.Waveform().size())) xv[i] = (wf[i]-fPedestal);
+                else xv[i] = CLHEP::RandGauss::shoot(0, fLineNoiseRMS); 
+            }
+
+            
             //Found maximum peak in the Waveform
             Double_t SPE_Max = 0;
             double maxADC=*max_element(wf.begin(),wf.end());

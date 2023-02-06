@@ -120,6 +120,7 @@ namespace opdet {
             int fSamples;
             bool WienerFilter;
             bool GaussFilter;
+            double fFrequencyCutOff;
 
             //----------------------------------------------------
             // Declare member functions
@@ -159,7 +160,7 @@ namespace opdet {
         fScale             = pset.get< double >("Scale");
         WienerFilter       = pset.get< bool   >("WienerFilter");
         GaussFilter        = pset.get< bool   >("GaussFilter");
-        FrequencyCutOff    = pset.get< double >("GaussFilterCutOff");
+        fFrequencyCutOff   = pset.get< double >("GaussFilterCutOff");
         WfDeco=0;  
       
         // auto const *LarProp = lar::providerFrom<detinfo::LArPropertiesService>();
@@ -172,7 +173,7 @@ namespace opdet {
 
         // Obtain parameters from TimeService
         auto const clockData = art::ServiceHandle<detinfo::DetectorClocksService const>()->DataForJob();
-        double fSampleFreq = clockData.OpticalClock().Frequency();
+        fSampleFreq = clockData.OpticalClock().Frequency();
                  
         auto const detProp = art::ServiceHandle<detinfo::DetectorPropertiesService const>()->DataForJob(clockData);
        
@@ -234,15 +235,14 @@ namespace opdet {
                 xv[i] = out_recowave[i];
             }
      
-            if (static_cast<int>(wf.Waveform().size()) <= fSamples){
+            if (static_cast<int>(wf.Waveform().size()) <= fSamples) {
                 out_recowave.resize(fSamples,0); 
                 for (Int_t i = wf.Waveform().size(); i<fSamples; i++) 
                 out_recowave[i] = CLHEP::RandGauss::shoot(fPedestal, fLineNoiseRMS); 
-            }
-
-            else{
+            } 
+            else {
                 printf("\nWARNING: waveform size is %lu, which is larger than fSamples (%i)\n", 
-                    wf.Waveform().size(), fSamples); 
+                wf.Waveform().size(), fSamples); 
                 out_recowave.resize(fSamples); 
             }
                 
@@ -347,56 +347,62 @@ namespace opdet {
       
             //******************************
             // Compute filters.
-            //******************************
+            //******************************                             
+            for (int i=0; i<fSamples*0.5+1; i++) {
+                // fill FFT arrays
+                xH[i] = TComplex(xH_re[i], xH_im[i]);
+                xV[i] = TComplex(xV_re[i], xV_im[i]);
+                xS[i] = TComplex(xS_re[i], xS_im[i]);
+                xN[i] = TComplex(xN_re[i], xN_im[i]);
                 
-            if (WienerFilter){                                
-                for (int i=0; i<fSamples*0.5+1; i++) {
-                    // fill FFT arrays
-                    xH[i] = TComplex(xH_re[i], xH_im[i]);
-                    xV[i] = TComplex(xV_re[i], xV_im[i]);
-                    xS[i] = TComplex(xS_re[i], xS_im[i]);
-                    xN[i] = TComplex(xN_re[i], xN_im[i]);
-                    // Compute spectral density
-                    H2[i] = xH[i].Rho2();
-                    S2[i] = xS[i].Rho2();
-                    N2[i] = fLineNoiseRMS * fLineNoiseRMS * fSamples ;
+                // Compute spectral density
+                H2[i] = xH[i].Rho2();
+                S2[i] = xS[i].Rho2();
+                N2[i] = fLineNoiseRMS * fLineNoiseRMS * fSamples ;
+                
+                if (WienerFilter == true){
                     // Compute Wiener filter
-                    G[i]  = TComplex::Conjugate(xH[i])*S2[i] / (H2[i]*S2[i] + N2[i]);
-                    // Correct template pretrigger
-                    TComplex phase = TComplex(0., -TMath::TwoPi()*i*fPreTrigger/(fSamples)); 
-                    G[i] = G[i]*TComplex::Exp(phase);
-                    // Compute filtered signal
-                    xY[i] = (G[i]*xV[i]);
-                    xY_re[i] = xY[i].Re(); xY_im[i] = xY[i].Im();
+                    G[i] = TComplex::Conjugate(xH[i])*S2[i] / (H2[i]*S2[i] + N2[i]);
                 }
-    
-                //Transform of the filtered signal
-                fft = TVirtualFFT::FFT(1, &fSamples, "M C2R");
-                fft->SetPointsComplex(xY_re, xY_im);
-                fft->Transform();
-                xy = fft->GetPointsReal();
-                for (int i=0; i<fSamples; i++){ 
-                    out_recowave[i] = xy[i]*fScale;
+
+                else if (GaussFilter == true){
+                    // Compute gauss filter
+                    G[0] = TComplex(0,0);
+                    G[i] = TComplex::Exp(-0.5*TMath::Power(i*1e-6*fSampleFreq/(fSamples*fFrequencyCutOff),2))/xH[i];
                 }
+
+                else{
+                    // Compute dec signal
+                    G[i] = TComplex::Power(xH[i],-1);// Standard dec is just the division of signal and SPE template in Fourier space
+                }
+
+                // Correct template pretrigger
+                TComplex phase = TComplex(0., -TMath::TwoPi()*i*fPreTrigger/(fSamples)); 
+                G[i] = G[i]*TComplex::Exp(phase);
+                
+                // Compute dec signal
+                xY[i] = (G[i]*xV[i]);
+                xY_re[i] = xY[i].Re(); xY_im[i] = xY[i].Im();
+            }
+
+            //Transform of the filtered signal
+            fft = TVirtualFFT::FFT(1, &fSamples, "M C2R");
+            fft->SetPointsComplex(xY_re, xY_im);
+            fft->Transform();
+            xy = fft->GetPointsReal();
+            for (int i=0; i<fSamples; i++){ 
+                out_recowave[i] = xy[i]*fScale;
+                // out_recowave[i] = xy[i];
+                // std::cout << xy[i] << std::endl;
             }
             
-            else if (GaussFilter){
-                std::vector<double> fFrequency;
-                G[0] = 0;
-                for (int ii=1; ii<fSamples; ii++) {
-                    fFrequency.push_back(ii*fSampleFreq/fSamples)
-                    G[ii] = TComplex::Exp(-0.5*math::Power(fFrequency[ii]/fFrequencyCutOff,2))
-                }
-            }
-            
-            else{}
-    
             raw::OpDetWaveform dgwave( wf.TimeStamp(), wf.ChannelNumber(), out_digiwave );
             out_wave->emplace_back(std::move(dgwave));
         
             recob::OpWaveform decwav(wf.TimeStamp(), wf.ChannelNumber(), out_recowave );
             out_decowave->emplace_back(std::move(decwav));   
         }//for
+
     // Push the OpDetWaveforms and OpWaveform into the event
     evt.put(std::move(out_wave));
     evt.put(std::move(out_decowave));

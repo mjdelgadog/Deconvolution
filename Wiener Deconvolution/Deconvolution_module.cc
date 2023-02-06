@@ -95,42 +95,41 @@ namespace opdet {
     class OphitDeconvolution : public art::EDProducer{
         public:
             explicit OphitDeconvolution(const fhicl::ParameterSet&);
-                virtual ~OphitDeconvolution();
+            virtual ~OphitDeconvolution();
             void produce(art::Event& evt);
         
-        // Parameters we'll read from the fcl-file
-        std::string fInputModule;        // Module used to create OpDetWaveforms
-        std::string fInstanceName;       // Input tag for OpDetWaveforms collection
-        double fSampleFreq;              // Sampling frequency in MHz 
-        double  fTimeBegin;              // Beginning of waveform in us
-        double  fTimeEnd;                // End of waveform in us
-        size_t fReadoutWindow;           // In ticks
-        int    fBaselineSubtract;        // Baseline to subtract from each waveform
-        short  fPedestal;                // In ADC counts
-        double  fLineNoiseRMS;           // Pedestal RMS in ADC counts
-        size_t fPreTrigger;              // In ticks
-        std::vector<double> fSinglePEWaveform;   // Template for a single PE in ADC
-        unsigned int WfDeco;
-        std::string fDigiDataFile;
-        double ScintYieldRatio;          // liquid argon scintillation yield ratio
-        double ScintFastTimeConst;
-        double ScintSlowTimeConst;
-        double ScintResolutionScale;  
-        double fScale;
-        int fSamples;
-        bool WienerFilter;
-        bool GaussFilter;
-        //----------------------------------------------------
-        // Declare member functions
-        std::vector<raw::OpDetWaveform> RunDeconvolution(std::vector<raw::OpDetWaveform> const& wfHandle);
-        
-        //------------------------------------------------------
-        //Load TFileService service
-        art::ServiceHandle<art::TFileService> tfs;
-        
+            // Parameters we'll read from the fcl-file
+            std::string fInputModule;        // Module used to create OpDetWaveforms
+            std::string fInstanceName;       // Input tag for OpDetWaveforms collection
+            double fSampleFreq;              // Sampling frequency in MHz 
+            double  fTimeBegin;              // Beginning of waveform in us
+            double  fTimeEnd;                // End of waveform in us
+            size_t fReadoutWindow;           // In ticks
+            int    fBaselineSubtract;        // Baseline to subtract from each waveform
+            short  fPedestal;                // In ADC counts
+            double  fLineNoiseRMS;           // Pedestal RMS in ADC counts
+            size_t fPreTrigger;              // In ticks
+            std::vector<double> fSinglePEWaveform;   // Template for a single PE in ADC
+            unsigned int WfDeco;
+            std::string fDigiDataFile;
+            double ScintYieldRatio;          // liquid argon scintillation yield ratio
+            double ScintFastTimeConst;
+            double ScintSlowTimeConst;
+            double ScintResolutionScale;  
+            double fScale;
+            int fSamples;
+            bool WienerFilter;
+            bool GaussFilter;
+
+            //----------------------------------------------------
+            // Declare member functions
+            std::vector<raw::OpDetWaveform> RunDeconvolution(std::vector<raw::OpDetWaveform> const& wfHandle);
+            
+            //------------------------------------------------------
+            //Load TFileService service
+            art::ServiceHandle<art::TFileService> tfs;
       };
     }
-
 #endif
   
 namespace opdet{
@@ -145,21 +144,22 @@ namespace opdet {
     {  
         //read fhicl paramters
 
-        fLineNoiseRMS         = pset.get< double  >("LineNoiseRMS" ); //noise for FFT
-        fInputModule          = pset.get< std::string >("InputModule");
-        fPreTrigger           = pset.get< size_t >("PreTrigger" );
-        fTimeBegin            = pset.get< double >("TimeBegin");
-        fTimeEnd              = pset.get< double >("TimeEnd"  );
-        fPedestal             = pset.get< short  >("Pedestal"   );
-        fReadoutWindow        = pset.get< size_t >("ReadoutWindow" );
-        fBaselineSubtract     = pset.get< int >("fBaselineSubtract", 0 );
-        fInputModule          = pset.get< std::string >("InputModule");
-        fInstanceName         = pset.get< std::string >("InstanceName");
-        fDigiDataFile         = pset.get< std::string >("DigiDataFile");
-        fSamples              = pset.get< int >("fSamples");
-        fScale                = pset.get< double >("Scale");
-        WienerFilter          = pset.get< bool   >("WienerFilter");
-        GaussFilter           = pset.get< bool   >("GaussFilter");
+        fLineNoiseRMS      = pset.get< double  >("LineNoiseRMS" ); //noise for FFT
+        fInputModule       = pset.get< std::string >("InputModule");
+        fPreTrigger        = pset.get< size_t >("PreTrigger" );
+        fTimeBegin         = pset.get< double >("TimeBegin");
+        fTimeEnd           = pset.get< double >("TimeEnd"  );
+        fPedestal          = pset.get< short  >("Pedestal"   );
+        fReadoutWindow     = pset.get< size_t >("ReadoutWindow" );
+        fBaselineSubtract  = pset.get< int >("fBaselineSubtract", 0 );
+        fInputModule       = pset.get< std::string >("InputModule");
+        fInstanceName      = pset.get< std::string >("InstanceName");
+        fDigiDataFile      = pset.get< std::string >("DigiDataFile");
+        fSamples           = pset.get< int >("fSamples");
+        fScale             = pset.get< double >("Scale");
+        WienerFilter       = pset.get< bool   >("WienerFilter");
+        GaussFilter        = pset.get< bool   >("GaussFilter");
+        FrequencyCutOff    = pset.get< double >("GaussFilterCutOff");
         WfDeco=0;  
       
         // auto const *LarProp = lar::providerFrom<detinfo::LArPropertiesService>();
@@ -172,13 +172,12 @@ namespace opdet {
 
         // Obtain parameters from TimeService
         auto const clockData = art::ServiceHandle<detinfo::DetectorClocksService const>()->DataForJob();
-        fSampleFreq = clockData.OpticalClock().Frequency();
+        double fSampleFreq = clockData.OpticalClock().Frequency();
                  
         auto const detProp = art::ServiceHandle<detinfo::DetectorPropertiesService const>()->DataForJob(clockData);
        
         fTimeBegin = 0; 
-        fTimeEnd   = detProp.ReadOutWindowSize() / clockData.TPCClock().Frequency(); 
-          
+        fTimeEnd   = detProp.ReadOutWindowSize() / clockData.TPCClock().Frequency();  
     }
     
     //---------------------------------------------------------------------------
@@ -253,14 +252,14 @@ namespace opdet {
             double maxAmplit= maxADC-fPedestal;
             SPE_Max = maxAmplit/8.0 ;
                        
-     //******************************
-     //--Original Signal---
-     //******************************  
-     std::vector<double>xs(fSamples,0.);
-     //ST profile 
-     auto const *Larprop = lar::providerFrom<detinfo::LArPropertiesService>();
-     std::vector<double>SignalTime={(Larprop->ScintFastTimeConst()* 0.001),(Larprop->ScintSlowTimeConst()* 0.001)};
-     std::vector<double>SignalScint={Larprop->ScintYieldRatio(),1.-Larprop->ScintYieldRatio()};
+            //******************************
+            //--Original Signal---
+            //******************************  
+            std::vector<double>xs(fSamples,0.);
+            //ST profile 
+            auto const *Larprop = lar::providerFrom<detinfo::LArPropertiesService>();
+            std::vector<double>SignalTime={(Larprop->ScintFastTimeConst()* 0.001),(Larprop->ScintSlowTimeConst()* 0.001)};
+            std::vector<double>SignalScint={Larprop->ScintYieldRatio(),1.-Larprop->ScintYieldRatio()};
 
             //******************************
             //--Noise---
@@ -280,19 +279,18 @@ namespace opdet {
             double t = t0; 
             double* xt = new double[fSamples];      
 
-     for (int i=0; i < fSamples; i++) {     
-       xs[i] = SPE_Max*TMath::Gaus(i, 8, 0.1,true);//0.09//gauss function  
-       //NEW Definition 
-       double lightsignal=0;
-       for (size_t j=0; j<SignalTime.size();j++){
-       lightsignal+=SignalScint[j]*exp(-t/SignalTime[j]);
-       }
-       xs[i] = lightsignal; 
-       xt[i] = t;
-       xn[i] = CLHEP::RandGauss::shoot(fPedestal, fLineNoiseRMS);//gRandom->Gaus(0, fLineNoiseRMS);//white noise  (0, hNoiseAmpl->GetRMS())
-       t+=dt;
-       
-      }
+            for (int i=0; i < fSamples; i++) {     
+                xs[i] = SPE_Max*TMath::Gaus(i, 8, 0.1,true);//0.09//gauss function  
+                //NEW Definition 
+                double lightsignal=0;
+                for (size_t j=0; j<SignalTime.size();j++){
+                    lightsignal+=SignalScint[j]*exp(-t/SignalTime[j]);
+                }
+                xs[i] = lightsignal; 
+                xt[i] = t;
+                xn[i] = CLHEP::RandGauss::shoot(fPedestal, fLineNoiseRMS);//gRandom->Gaus(0, fLineNoiseRMS);//white noise  (0, hNoiseAmpl->GetRMS())
+                t+=dt;
+            }
             
             //******************************
             // Get FFT service.
@@ -343,51 +341,55 @@ namespace opdet {
 
             //Spectral density
       
-      double*H2 =new double[fSamples];   //spe response spectral density
-      double*S2 =new double[fSamples];   //original signal spectral density
-      double*N2 =new double[fSamples];   // noise spectral density 
+            double*H2 =new double[fSamples];   //spe response spectral density
+            double*S2 =new double[fSamples];   //original signal spectral density
+            double*N2 =new double[fSamples];   // noise spectral density 
       
-    //******************************
-    // Compute filters.
-    //******************************
-        
-     if (WienerFilter){ 
-                                          
-      for (int i=0; i<fSamples*0.5+1; i++) {
-    // fill FFT arrays
-      xH[i] = TComplex(xH_re[i], xH_im[i]);
-      xV[i] = TComplex(xV_re[i], xV_im[i]);
-      xS[i] = TComplex(xS_re[i], xS_im[i]);
-      xN[i] = TComplex(xN_re[i], xN_im[i]);
-    // Compute spectral density
-      H2[i] = xH[i].Rho2();
-      S2[i] = xS[i].Rho2();
-      N2[i] = fLineNoiseRMS * fLineNoiseRMS * fSamples ;
-    // Compute Wiener filter
-      G[i]  = TComplex::Conjugate(xH[i])*S2[i] / (H2[i]*S2[i] + N2[i]);
-    // Correct template pretrigger
-      TComplex phase = TComplex(0., -TMath::TwoPi()*i*fPreTrigger/(fSamples)); 
-      G[i] = G[i]*TComplex::Exp(phase);
-    // Compute filtered signal
-      xY[i] = (G[i]*xV[i]);
-      xY_re[i] = xY[i].Re(); xY_im[i] = xY[i].Im();
-     }
+            //******************************
+            // Compute filters.
+            //******************************
+                
+            if (WienerFilter){                                
+                for (int i=0; i<fSamples*0.5+1; i++) {
+                    // fill FFT arrays
+                    xH[i] = TComplex(xH_re[i], xH_im[i]);
+                    xV[i] = TComplex(xV_re[i], xV_im[i]);
+                    xS[i] = TComplex(xS_re[i], xS_im[i]);
+                    xN[i] = TComplex(xN_re[i], xN_im[i]);
+                    // Compute spectral density
+                    H2[i] = xH[i].Rho2();
+                    S2[i] = xS[i].Rho2();
+                    N2[i] = fLineNoiseRMS * fLineNoiseRMS * fSamples ;
+                    // Compute Wiener filter
+                    G[i]  = TComplex::Conjugate(xH[i])*S2[i] / (H2[i]*S2[i] + N2[i]);
+                    // Correct template pretrigger
+                    TComplex phase = TComplex(0., -TMath::TwoPi()*i*fPreTrigger/(fSamples)); 
+                    G[i] = G[i]*TComplex::Exp(phase);
+                    // Compute filtered signal
+                    xY[i] = (G[i]*xV[i]);
+                    xY_re[i] = xY[i].Re(); xY_im[i] = xY[i].Im();
+                }
     
-    //Transform of the filtered signal
-      fft = TVirtualFFT::FFT(1, &fSamples, "M C2R");
-      fft->SetPointsComplex(xY_re, xY_im);
-      fft->Transform();
-      xy = fft->GetPointsReal();
-      for (int i=0; i<fSamples; i++){ 
-        out_recowave[i] = xy[i]*fScale;
-      }
-    }
-    else if (GaussFilter){ 
-    
-    }
-    else{
-    
-    }
+                //Transform of the filtered signal
+                fft = TVirtualFFT::FFT(1, &fSamples, "M C2R");
+                fft->SetPointsComplex(xY_re, xY_im);
+                fft->Transform();
+                xy = fft->GetPointsReal();
+                for (int i=0; i<fSamples; i++){ 
+                    out_recowave[i] = xy[i]*fScale;
+                }
+            }
+            
+            else if (GaussFilter){
+                std::vector<double> fFrequency;
+                G[0] = 0;
+                for (int ii=1; ii<fSamples; ii++) {
+                    fFrequency.push_back(ii*fSampleFreq/fSamples)
+                    G[ii] = TComplex::Exp(-0.5*math::Power(fFrequency[ii]/fFrequencyCutOff,2))
+                }
+            }
+            
+            else{}
     
             raw::OpDetWaveform dgwave( wf.TimeStamp(), wf.ChannelNumber(), out_digiwave );
             out_wave->emplace_back(std::move(dgwave));
@@ -395,7 +397,6 @@ namespace opdet {
             recob::OpWaveform decwav(wf.TimeStamp(), wf.ChannelNumber(), out_recowave );
             out_decowave->emplace_back(std::move(decwav));   
         }//for
-      
     // Push the OpDetWaveforms and OpWaveform into the event
     evt.put(std::move(out_wave));
     evt.put(std::move(out_decowave));

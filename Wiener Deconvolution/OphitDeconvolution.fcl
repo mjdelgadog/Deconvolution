@@ -16,7 +16,7 @@ BEGIN_PROLOG
      ReadoutWindow:        1000    # In ticks
      Pedestal:             1500    # in ADC counts
      fSamples:             699
-     Scale:                0.0079  #(0.0632/8)//*0.09244;scint-9.244/100=*0.09244 true=0.0632 false=0.244                      
+     Scale:                0.09244                        
      DigiDataFile:         "/dune/data2/users/jdelgadg/fbk_decon.txt"    
      WienerFilter:         true    # false for Gauss or general deconvolution
      GaussFilter:          false   # false for Wiener or general deconvolution

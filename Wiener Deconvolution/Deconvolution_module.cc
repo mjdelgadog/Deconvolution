@@ -5,8 +5,8 @@
 // Filter wiener-FFT
 //========================================================= 
  
-#ifndef OphitDeconvolution_h
-#define OphitDeconvolution_h
+#ifndef Deconvolution_h
+#define Deconvolution_h
  
 // Framework includes
 
@@ -92,10 +92,10 @@ using std::vector;
 
 
 namespace opdet {
-    class OphitDeconvolution : public art::EDProducer{
+    class Deconvolution : public art::EDProducer{
         public:
-            explicit OphitDeconvolution(const fhicl::ParameterSet&);
-            virtual ~OphitDeconvolution();
+            explicit Deconvolution(const fhicl::ParameterSet&);
+            virtual ~Deconvolution();
             void produce(art::Event& evt);
         
             // Parameters we'll read from the fcl-file
@@ -121,7 +121,7 @@ namespace opdet {
             bool WienerFilter;
             bool GaussFilter;
             double fFrequencyCutOff;
-
+            double fTickCutOff;
             //----------------------------------------------------
             // Declare member functions
             std::vector<raw::OpDetWaveform> RunDeconvolution(std::vector<raw::OpDetWaveform> const& wfHandle);
@@ -134,13 +134,13 @@ namespace opdet {
 #endif
   
 namespace opdet{
-    DEFINE_ART_MODULE(OphitDeconvolution)
+    DEFINE_ART_MODULE(Deconvolution)
 }
 
 namespace opdet {
     //---------------------------------------------------------------------------
     // Constructor
-    OphitDeconvolution::OphitDeconvolution(const fhicl::ParameterSet& pset)
+    Deconvolution::Deconvolution(const fhicl::ParameterSet& pset)
     : EDProducer{pset}
     {  
         //read fhicl paramters
@@ -183,11 +183,11 @@ namespace opdet {
     
     //---------------------------------------------------------------------------
     // Destructor
-    OphitDeconvolution::~OphitDeconvolution(){
+    Deconvolution::~Deconvolution(){
     }    
     
     //-------------------------------------------------------------------------
-    void OphitDeconvolution::produce(art::Event& evt){
+    void Deconvolution::produce(art::Event& evt){
     
         art::Handle< std::vector< raw::OpDetWaveform > > wfHandle;
         evt.getByLabel(fInputModule, fInstanceName, wfHandle);
@@ -371,7 +371,8 @@ namespace opdet {
                 else if (GaussFilter == true){
                     // Compute gauss filter
                     G[0] = TComplex(0,0);
-                    G[i] = TComplex::Exp(-0.5*TMath::Power(i*1e-6*fSampleFreq/(fSamples*fFrequencyCutOff),2))/xH[i];
+                    fTickCutOff = fSamples*fFrequencyCutOff*1e6*fSampleFreq;
+                    G[i] = TComplex::Exp(-0.5*TMath::Power(i*1e6*fSampleFreq/(fSamples*fTickCutOff),2))/xH[i];
                 }
 
                 else{
@@ -393,9 +394,17 @@ namespace opdet {
             fft->SetPointsComplex(xY_re, xY_im);
             fft->Transform();
             xy = fft->GetPointsReal();
-            for (int i=0; i<fSamples; i++){ 
-                out_recowave[i] = xy[i]*fScale;
-                // out_recowave[i] = xy[i];
+            
+            // Correct baseline after deconvolution
+            double DecPedestal = 0;
+            for (size_t i=0; i<fPreTrigger; i++){
+                DecPedestal = DecPedestal + xy[i];
+            }
+            DecPedestal = DecPedestal/int(fPreTrigger);
+
+            // Write dec wvf to output vector
+            for (int i=0; i<fSamples; i++){                 
+                out_recowave[i] = (xy[i]-DecPedestal)*fScale;
                 // std::cout << xy[i] << std::endl;
             }
             

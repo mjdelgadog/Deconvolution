@@ -2,7 +2,7 @@
 #include "opticaldetectorservices_dune.fcl"
 #include "DigitizerSPE.fcl"
 #include "services_dune.fcl"
-#include "OphitDeconvolution.fcl"
+#include "Deconvolution.fcl"
 #include "DecoAnalysis.fcl"
 
 

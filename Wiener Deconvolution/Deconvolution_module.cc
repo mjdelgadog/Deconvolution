@@ -1,12 +1,12 @@
 // =========================================================
-// Deconvolution Module
+// OpHitDeconvolution Module
 // @authors     : Daniele Guffanti, Maritza Delgado
 // @created     : Jan 26, 2022 
 // Filter wiener-FFT
 //========================================================= 
  
-#ifndef Deconvolution_h
-#define Deconvolution_h
+#ifndef OpHitDeconvolution_h
+#define OpHitDeconvolution_h
  
 // Framework includes
 
@@ -92,10 +92,10 @@ using std::vector;
 
 
 namespace opdet {
-    class Deconvolution : public art::EDProducer{
+    class OpHitDeconvolution : public art::EDProducer{
         public:
-            explicit Deconvolution(const fhicl::ParameterSet&);
-            virtual ~Deconvolution();
+            explicit OpHitDeconvolution(const fhicl::ParameterSet&);
+            virtual ~OpHitDeconvolution();
             void produce(art::Event& evt);
         
             // Parameters we'll read from the fcl-file
@@ -124,7 +124,7 @@ namespace opdet {
             double fTickCutOff;
             //----------------------------------------------------
             // Declare member functions
-            std::vector<raw::OpDetWaveform> RunDeconvolution(std::vector<raw::OpDetWaveform> const& wfHandle);
+            std::vector<raw::OpDetWaveform> RunOpHitDeconvolution(std::vector<raw::OpDetWaveform> const& wfHandle);
             
             //------------------------------------------------------
             //Load TFileService service
@@ -134,13 +134,13 @@ namespace opdet {
 #endif
   
 namespace opdet{
-    DEFINE_ART_MODULE(Deconvolution)
+    DEFINE_ART_MODULE(OpHitDeconvolution)
 }
 
 namespace opdet {
     //---------------------------------------------------------------------------
     // Constructor
-    Deconvolution::Deconvolution(const fhicl::ParameterSet& pset)
+    OpHitDeconvolution::OpHitDeconvolution(const fhicl::ParameterSet& pset)
     : EDProducer{pset}
     {  
         //read fhicl paramters
@@ -183,11 +183,11 @@ namespace opdet {
     
     //---------------------------------------------------------------------------
     // Destructor
-    Deconvolution::~Deconvolution(){
+    OpHitDeconvolution::~OpHitDeconvolution(){
     }    
     
     //-------------------------------------------------------------------------
-    void Deconvolution::produce(art::Event& evt){
+    void OpHitDeconvolution::produce(art::Event& evt){
     
         art::Handle< std::vector< raw::OpDetWaveform > > wfHandle;
         evt.getByLabel(fInputModule, fInstanceName, wfHandle);
@@ -395,7 +395,7 @@ namespace opdet {
             fft->Transform();
             xy = fft->GetPointsReal();
             
-            // Correct baseline after deconvolution
+            // Correct baseline after OpHitDeconvolution
             double DecPedestal = 0;
             for (size_t i=0; i<fPreTrigger; i++){
                 DecPedestal = DecPedestal + xy[i];

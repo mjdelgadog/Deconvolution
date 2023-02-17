@@ -3,6 +3,7 @@ standard_ophit_deconvolution:{
   module_type:    "Deconvolution"
   InputModule:    "DigitizerSPE"
   InstanceName:   ""    
+
   
   LineNoiseRMS:      3       # Pedestal RMS in ADC counts, likely an underestimate
   TimeBegin:         0       # In us 
@@ -19,5 +20,4 @@ standard_ophit_deconvolution:{
   GaussFilterCutOff: 2e6    # In Hz
   # {false,false}=Default Deconvolution
 }
-
 END_PROLOG

@@ -268,7 +268,7 @@ namespace opdet {
             //--Noise---
             //******************************
             double*xn = new double[fSamples]; 
-            
+
             //******************************
             //--deconvolved signal---
             //******************************     

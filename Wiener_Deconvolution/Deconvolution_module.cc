@@ -265,22 +265,22 @@ namespace opdet {
       void produce(art::Event& evt);
 
       // Parameters we'll read from the fcl-file
-      std::string fInputModule;         //!< Module used to create OpDetWaveforms
-      std::string fInstanceName;        //!< Input tag for OpDetWaveforms collection
-      double fSampleFreq;               //!< Sampling frequency in MHz 
-      double  fTimeBegin;               //!< Beginning of waveform in us
-      double  fTimeEnd;                 //!< End of waveform in us
-      short  fPedestal;                 //!< In ADC counts
-      double  fLineNoiseRMS;            //!< Pedestal RMS in ADC counts
-      size_t fPreTrigger;               //!< In ticks
-      std::vector<double> fSinglePEWaveform;   //!< Template for a single PE in ADC
-      double fSinglePEAmplitude;        //!< single PE amplitude
-      unsigned int WfDeco;              //!< nr of waveform processed
-      std::string fDigiDataFile;        //!< single p.e. template source file
-      int fDigiDataColumn;           //!< single p.e. template source file column    
-      double fScale;                    //!< ???
-      size_t fReadoutWindow;            //!< In ticks
-      int fSamples;                     //!< (Same as ReadoutWindow?)
+      std::string fInputModule;                 //!< Module used to create OpDetWaveforms
+      std::string fInstanceName;                //!< Input tag for OpDetWaveforms collection
+      double fSampleFreq;                       //!< Sampling frequency in MHz 
+      double  fTimeBegin;                       //!< Beginning of waveform in us
+      double  fTimeEnd;                         //!< End of waveform in us
+      short  fPedestal;                         //!< In ADC counts
+      double  fLineNoiseRMS;                    //!< Pedestal RMS in ADC counts
+      size_t fPreTrigger;                       //!< In ticks
+      std::vector<double> fSinglePEWaveform;    //!< Template for a single PE in ADC
+      double fSinglePEAmplitude;                //!< single PE amplitude
+      unsigned int WfDeco;                      //!< nr of waveform processed
+      std::string fDigiDataFile;                //!< single p.e. template source file
+      size_t fDigiDataColumn;                      //!< single p.e. template source file column    
+      double fScale;                            //!< ???
+      size_t fReadoutWindow;                    //!< In ticks
+      int fSamples;                             //!< (Same as ReadoutWindow?)
       bool fApplyPrefilter;
       WfmPrefilter_t fPrefilterConfig;
       WfmFilter_t fFilterConfig; 
@@ -655,10 +655,10 @@ namespace opdet {
    * varible `fDigiDataColumn`.
    */
   void Deconvolution::SourceSPEDigiDataFile() {
-    int n_columns = CountFileColumns(fDigiDataFile.c_str()); 
+    size_t n_columns = CountFileColumns(fDigiDataFile.c_str()); 
     if (fDigiDataColumn >= n_columns) {
       printf("Deconvolution::SourceSPETemplate ERROR: "); 
-      printf("The module is supposed to select column %lu, but only %i columns are present.\n", 
+      printf("The module is supposed to select column %lu, but only %lu columns are present.\n", 
           fDigiDataColumn, n_columns); 
       throw art::Exception(art::errors::InvalidNumber); 
     }

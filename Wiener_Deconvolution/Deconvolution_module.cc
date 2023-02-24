@@ -277,7 +277,7 @@ namespace opdet {
       double fSinglePEAmplitude;        //!< single PE amplitude
       unsigned int WfDeco;              //!< nr of waveform processed
       std::string fDigiDataFile;        //!< single p.e. template source file
-      size_t fDigiDataColumn;           //!< single p.e. template source file column    
+      int fDigiDataColumn;           //!< single p.e. template source file column    
       double fScale;                    //!< ???
       size_t fReadoutWindow;            //!< In ticks
       int fSamples;                     //!< (Same as ReadoutWindow?)
@@ -771,7 +771,7 @@ namespace opdet {
     while (x[ileft] >= 0.0 && ileft > 0) ileft--; 
     while (x[iright] >=0.0 && iright < fSamples) iright++; 
 
-    for (size_t k=ileft; k<=iright; k++) norm += x[k]; 
+    for (Int_t k=ileft; k<=iright; k++) norm += x[k]; 
 
     norm /= (Double_t)fSamples; 
 

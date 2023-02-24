@@ -107,7 +107,8 @@ namespace opdet {
           fhicl::Atom<short>       Pedestal{ fhicl::Name("Pedestal"), 1500}; 
           fhicl::Atom<std::string> DigiDataFile{ fhicl::Name("DigiDataFile") }; 
           fhicl::Atom<size_t>      DigiDataColumn{ fhicl::Name("DigiDataColumn"), 1 }; 
-          fhicl::Atom<Int_t>       Samples{ fhicl::Name("Samples"), 699 }; 
+          fhicl::Atom<Int_t>       Samples{ fhicl::Name("Samples"), 699 };
+          fhicl::Atom<Int_t>       PedestalBuffer{ fhicl::Name("PedestalBuffer"), 10 }; 
           fhicl::Atom<Double_t>    Scale{ fhicl::Name("Scale") }; 
           fhicl::Atom<bool>        ApplyPrefilter{ fhicl::Name("ApplyPrefilter"), false };
           struct Filter {
@@ -277,10 +278,12 @@ namespace opdet {
       double fSinglePEAmplitude;                //!< single PE amplitude
       unsigned int WfDeco;                      //!< nr of waveform processed
       std::string fDigiDataFile;                //!< single p.e. template source file
-      size_t fDigiDataColumn;                      //!< single p.e. template source file column    
+      size_t fDigiDataColumn;                   //!< single p.e. template source file column    
       double fScale;                            //!< ???
       size_t fReadoutWindow;                    //!< In ticks
       int fSamples;                             //!< (Same as ReadoutWindow?)
+      int fPedestalBuffer;                      //!< Used to calculate pedestal which is definded as PreTrigger - PedestalBuffer in [ticks]
+                                                //!< default is 10 ticks -> should be adapted to resulting peak width (after deconvolution).
       bool fApplyPrefilter;
       WfmPrefilter_t fPrefilterConfig;
       WfmFilter_t fFilterConfig; 
@@ -327,6 +330,7 @@ namespace opdet {
     fScale{ pars().Scale()},
     fReadoutWindow{ pars().ReadoutWindow()},
     fSamples{ pars().Samples()},
+    fPedestalBuffer{ pars().PedestalBuffer()},
     fPrefilterConfig{ WfmPrefilter_t( pars().Prefilter()) }, 
     fFilterConfig{ WfmFilter_t( pars().Filter() ) }
   {  
@@ -527,8 +531,16 @@ namespace opdet {
       fft_c2r->SetPointsComplex(&xY.fRe[0], &xY.fIm[0]);
       fft_c2r->Transform();
       double *xy = fft_c2r->GetPointsReal();
+     
+      // Correct baseline after deconvolution
+      double dec_pedestal = 0;
+      for (size_t i=0; i<fPreTrigger-fPedestalBuffer; i++){
+        dec_pedestal = dec_pedestal + xy[i];
+      }
+      dec_pedestal = dec_pedestal/int(fPreTrigger-fPedestalBuffer);
+      
       for (int i=0; i<fSamples; i++){ 
-        out_recowave[i] = xy[i]*scale;
+        out_recowave[i] = (xy[i]-dec_pedestal)*scale;
         // out_recowave[i] = xy[i];
         // std::cout << xy[i] << std::endl;
       }

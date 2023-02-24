@@ -210,7 +210,7 @@ namespace opdet {
             return result;
           }
 
-          for (int i=0; i<fCmplx.size(); i++) {
+          for (size_t i=0; i<fCmplx.size(); i++) {
             result.fCmplx.at(i) = fCmplx.at(i) * cwf.fCmplx.at(i); 
             result.fRe.at(i) = result.fCmplx.at(i).Re(); 
             result.fRe.at(i) = result.fCmplx.at(i).Im(); 
@@ -625,7 +625,7 @@ namespace opdet {
       double dt = 1/fSampleFreq; 
       double t = fTimeBegin;
 
-      for (int i=0; i<s.size(); i++) {
+      for (size_t i=0; i<s.size(); i++) {
         double lightsignal=0;
         for (size_t j=0; j<SignalTime.size();j++){
           lightsignal+=SignalScint[j]*exp(-t/SignalTime[j]);

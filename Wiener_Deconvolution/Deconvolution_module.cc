@@ -111,6 +111,7 @@ namespace opdet {
           fhicl::Atom<Int_t>       PedestalBuffer{ fhicl::Name("PedestalBuffer"), 10 }; 
           fhicl::Atom<Double_t>    Scale{ fhicl::Name("Scale") }; 
           fhicl::Atom<bool>        ApplyPrefilter{ fhicl::Name("ApplyPrefilter"), false };
+          fhicl::Atom<bool>        AutoScale{ fhicl::Name("AutoScale"), false };
           struct Filter {
             fhicl::Atom<std::string> Name{fhicl::Name("Name"), "Gauss"};
             fhicl::Atom<Double_t>    Cutoff{fhicl::Name("Cutoff"), 32};  
@@ -285,6 +286,7 @@ namespace opdet {
       int fPedestalBuffer;                      //!< Used to calculate pedestal which is definded as PreTrigger - PedestalBuffer in [ticks]
                                                 //!< default is 10 ticks -> should be adapted to resulting peak width (after deconvolution).
       bool fApplyPrefilter;
+      bool fAutoScale;
       WfmPrefilter_t fPrefilterConfig;
       WfmFilter_t fFilterConfig; 
       EInputShape fInputShape = kDelta; 
@@ -332,6 +334,7 @@ namespace opdet {
     fSamples{ pars().Samples()},
     fPedestalBuffer{ pars().PedestalBuffer()},
     fApplyPrefilter{ pars().ApplyPrefilter()},
+    fAutoScale{ pars().AutoScale()},
     fPrefilterConfig{ WfmPrefilter_t( pars().Prefilter()) }, 
     fFilterConfig{ WfmFilter_t( pars().Filter() ) }
   {  
@@ -521,13 +524,17 @@ namespace opdet {
       fft_c2r->SetPointsComplex(&xV.fRe.at(0), &xV.fIm.at(0)); 
       fft_c2r->Transform(); 
       Double_t* xPrefilter = fft_c2r->GetPointsReal(); 
-      Double_t scale = 1.0 / fSamples; 
+      Double_t scale = 1.0 / fSamples;
+      if (!fAutoScale) {scale = fScale;}
+
       for (int i=0; i<fSamples; i++) {
         out_recopref.at(i) = xPrefilter[i]*scale; 
       }
 
       Double_t filter_norm = ComputeNormalization(xGH); 
-      scale = filter_norm / (Double_t)fSamples;  
+      scale = filter_norm / (Double_t)fSamples;
+      if (!fAutoScale) {scale = fScale;}
+
       //printf("scale = %g/%i =  %g\n", filter_norm, fSamples, scale);  
       //getchar(); 
 

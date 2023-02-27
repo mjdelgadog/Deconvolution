@@ -1,7 +1,7 @@
 BEGIN_PROLOG
 standard_deconvolution:{
   module_type:    "Deconvolution"
-  InputModule:    "DigitizerSPE"
+  InputModule:    "digispe"
   InstanceName:   ""    
 
   LineNoiseRMS:      3       # Pedestal RMS in ADC counts, likely an underestimate
@@ -10,14 +10,14 @@ standard_deconvolution:{
   PreTrigger:        30      # In ticks 25 (scint) 160 gauss
   ReadoutWindow:     1000    # In ticks (Duplicate?)
   Pedestal:          1500    # in ADC counts
-  Samples:           699
-  Scale:             0.0079  #(0.0632/8)//*0.09244;scint-9.244/100=*0.09244 true=0.0632 false=0.244                      
+  Samples:           1000
+  Scale:             1       # Coustom scaling                      
   DigiDataFile:      "fbk_decon.txt"    
   DigiDataColumn:    0
   
-
   ApplyPrefilter:    true    # Filter the waveforms before deconvolution 
-
+  AutoScale:         true
+  
   WfmPrefilter: {
     Name: "Gauss"
     Cutoff: 2.2             # In MHz
@@ -27,8 +27,6 @@ standard_deconvolution:{
     Name: "Wiener"
     Cutoff: 1e-5 
   }
-
-  # {false,false}=Default Deconvolution
 }
 
 END_PROLOG

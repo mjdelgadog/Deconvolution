@@ -469,7 +469,11 @@ namespace opdet {
 
       //******************************
       // Compute filters.
-      //******************************                             
+      //******************************
+     
+      Double_t fFrequencyCutOff = fFilterConfig.fCutoff; 
+      Double_t fTickCutOff = fSamples*fFrequencyCutOff/fSampleFreq; // Filter cutoff converted to ticks in frequency space.  
+      
       for (int i=0; i<fSamples*0.5+1; i++) {
         // Compute spectral density
         double H2 = xH.fCmplx.at(i).Rho2();
@@ -487,10 +491,9 @@ namespace opdet {
         }
         else if (fFilterConfig.fType == Deconvolution::kGauss){
           // Compute gauss filter
-          Double_t gauss_cutoff = fFilterConfig.fCutoff; 
           xG.fCmplx[0] = TComplex(0,0);
           xG.fCmplx.at(i) = TComplex::Exp(
-              -0.5*TMath::Power(i*1e-6*fSampleFreq/(fSamples*gauss_cutoff),2))
+              -0.5*TMath::Power(i*1e-6*fSampleFreq/(fSamples*fTickCutOff),2))
             /xH.fCmplx.at(i);
         }
         else{

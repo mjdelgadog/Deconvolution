@@ -331,6 +331,7 @@ namespace opdet {
     fReadoutWindow{ pars().ReadoutWindow()},
     fSamples{ pars().Samples()},
     fPedestalBuffer{ pars().PedestalBuffer()},
+    fApplyPrefilter{ pars().ApplyPrefilter()},
     fPrefilterConfig{ WfmPrefilter_t( pars().Prefilter()) }, 
     fFilterConfig{ WfmFilter_t( pars().Filter() ) }
   {  

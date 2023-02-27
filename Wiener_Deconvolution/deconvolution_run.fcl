@@ -86,10 +86,8 @@ outputs:
    }
 }
 
-physics.producers.opdec.InputModule: digispe
-physics.producers.opdec.DigiDataColumn: 0
-physics.producers.opdec.ApplyPrefilter: true
-physics.producers.opdec.WfmPrefilter.Cutoff: 2.0
-physics.producers.opdec.WfmFilter.Name: "Wiener"
-
-#physics.producers.ophit.InputModule: digispe
+# physics.producers.opdec.InputModule: digispe
+# physics.producers.opdec.DigiDataColumn: 0
+# physics.producers.opdec.ApplyPrefilter: true
+# physics.producers.opdec.WfmPrefilter.Cutoff: 2.0
+# physics.producers.opdec.WfmFilter.Name: "Wiener"

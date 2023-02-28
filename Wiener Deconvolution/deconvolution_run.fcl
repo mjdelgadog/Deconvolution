@@ -2,7 +2,7 @@
 #include "opticaldetectorservices_dune.fcl"
 #include "DigitizerSPE.fcl"
 #include "services_dune.fcl"
-#include "Deconvolution.fcl"
+#include "Deconvolution_job.fcl"
 #include "DecoAnalysis.fcl"
 
 
@@ -12,7 +12,7 @@ process_name: DecReco
 services:
 {
   # Load the service that manages root files for histograms.
-  TFileService: { fileName: "deconv_reco_hist.root" }
+  TFileService: { fileName: "ophitdeconv_reco_hist_dv2.root" }
   RandomNumberGenerator: {} #ART native random number generator
   message:      @local::standard_info
                 @table::dunefd_simulation_services
@@ -41,7 +41,7 @@ physics:
    producers:
    {
       # photon detector reconstruction
-      opdec:  @local::standard_ophit_deconvolution
+      opdec:  @local::standard_deconvolution
       #ophit:     @local::dunefd_ophit
       #opflash:   @local::dunefd_opflash
       rns:       { module_type: "RandomNumberSaver" }
@@ -81,10 +81,7 @@ outputs:
    out1:
    {
       module_type: RootOutput
-      fileName:    "decon_reco_gen.root"
+      fileName:    "ophitdecon_reco_gen.root"
       #default file name, can override from command line with -o or --output
    }
 }
-
-physics.producers.opdec.InputModule: digispe
-#physics.producers.ophit.InputModule: digispe

@@ -114,9 +114,6 @@ namespace opdet {
     for (auto const& decowaveform : *deconv){
       int channel = decowaveform.Channel();
 
-      // Increase counter for number of waveforms on this optical channel
-      mapChannelWF[channel]++;
-
       // Implement different end time for waveforms of variable length
       //  double startTime = double(decowaveform.TimeStamp().GetTimeStamp()) - firstWaveformTime;
       double startTime = double(decowaveform.TimeStamp().GetTimeStamp());

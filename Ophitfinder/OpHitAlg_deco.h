@@ -32,8 +32,7 @@ namespace pmtana {
 
 namespace opdet {
 
- void RunHitFinder_deco(//std::vector<raw::OpDetWaveform>const&,
-                    std::vector<recob::OpWaveform> const&,                 
+ void RunHitFinder_deco(std::vector<recob::OpWaveform> const&,                 
                     std::vector<recob::OpHit>&,
                     pmtana::PulseRecoManager const&,
                     pmtana::PMTPulseRecoBase const&,

@@ -27,8 +27,7 @@
 
 namespace opdet {
   //----------------------------------------------------------------------------
-  void RunHitFinder_deco(//std::vector<raw::OpDetWaveform> const& opDetWaveformVector,
-                    std::vector<recob::OpWaveform>const& opWaveformVector,
+  void RunHitFinder_deco(std::vector<recob::OpWaveform>const& opWaveformVector,
                     std::vector<recob::OpHit>& hitVector,
                     pmtana::PulseRecoManager const& pulseRecoMgr,
                     pmtana::PMTPulseRecoBase const& threshAlg,

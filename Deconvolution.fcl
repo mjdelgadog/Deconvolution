@@ -1,0 +1,31 @@
+BEGIN_PROLOG
+standard_deconvolution:{
+  module_type:       "Deconvolution"
+  InputModule:       "opdigi"
+  InstanceName:      ""    
+
+  LineNoiseRMS:      3        # Pedestal RMS in [ADC] counts, likely an underestimate
+  TimeBegin:         0        # In [us] 
+  TimeEnd:           16       # In [us] 
+  PreTrigger:        100      # In [ticks] 25
+  Pedestal:          1500     # In [ADC]
+  Samples:           1000     # Timewindow in [ticks]
+  PedestalBuffer:    20       # In [ticks], should always be smaller than PreTrigger!
+  Scale:             0.001        # Sacilng of resulting wvfs                     
+  DigiDataFile:      "../template/fbk_DAPHNE_Dec22.txt"    
+  DigiDataColumn:    0
+  
+  AutoScale:         false     # Scaling based on SPE amp. from template 
+  ApplyPrefilter:    false     # Filter the waveforms before deconvolution 
+
+  WfmPrefilter: {
+    Name: "Gauss"
+    Cutoff: 2.              # In MHz
+  }
+
+  WfmFilter: {
+    Name: "Gauss"
+    Cutoff: 1.
+  }
+}
+END_PROLOG

@@ -1,0 +1,42 @@
+#include "SSPAlgorithm.fcl"
+
+BEGIN_PROLOG
+
+standard_digitizer: 
+{
+  module_type:  "OpDetDigitizerDUNE"
+  InputModules: ["largeant"] # Module that created simphotons
+
+  # These paramters are for 3 sensl SiPMs ganged.
+  # Will need to generalize/encapsulate in a tool
+  VoltageToADC:       151.5                                 # 18.45  Converting mV to ADC counts (counts in 1 mV)(0.37 fbk)(0.325hpk/lq0.86)
+  LineNoiseRMS:       1                                     # Pedestal RMS in ADC counts, likely an underestimate 
+  DarkNoiseRate:      0.                                    # (10) In Hz, Ranges 2-50 depending on Vbias 0.996
+  CrossTalk:          0.                                    # (0.2) Probability of producing 2 PE for 1 incident photon
+
+  Pedestal:           1500                                  # in ADC counts
+
+  FullWaveformOutput: false                                 # Output full waveform. Be careful with this option, setting it to "true" can result in large output files
+  DefaultSimWindow:   false                                 # Use -1*drift window as the start time and                                                 
+  TimeBegin:          0                                     # In us (not used if DefaultSimWindow is set to true)0.2
+  TimeEnd:            16                                    # In us (not used if DefaultSimWindow is set to true)
+  ReadoutWindow:      1000                                  # In ticks
+  
+  PreTrigger:         100                                    # [ticks] Does not do anything with padding = 0
+  algo_threshold:     @local::algo_sspleadingedge
+
+  Padding:            0                                     # In ticks
+  PeakTime:           1.960                                 # 1.950
+  SSP_LED_DigiTree:   true                                  # To create a SSP LED trigger Ttree
+  SinglePEsignal:     true                                  # false for ideal XArapuca response, true for testbench
+  SPEDataFile:        "../template/fbk_digi.txt"    # Path to SPE template
+  TestbenchSinglePE:  true                                  # Bool to select SPE template
+  
+  #Parameters for DAPHNE 
+  PulseLength:        16.0                                  # hpk 7.2  (FBK 0.0095)
+  MaxAmplitude:       0.04092                               # 0.04092 (FBK 0.0095)   # * VoltageToADC = 6.2 ADC/PE
+  FrontTime:          0.097                                 # 0.013(0.097 FBK)(0.146 )
+  BackTime:           0.91                                  # 0.51  (0.676hpk)
+}
+
+END_PROLOG

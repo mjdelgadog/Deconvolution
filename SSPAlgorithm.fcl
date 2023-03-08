@@ -1,0 +1,21 @@
+BEGIN_PROLOG
+
+##################################################
+#
+# SSP module algorithms
+#
+
+algo_sspleadingedge:
+{
+    Name:        "SSP_LED"
+    ADCThreshold:      10
+    #MinWidth:          10
+    #SecondThreshold:    1
+    Pedestal:        1500
+    DWindow:           10
+    ReadoutWd:       1001 # Actual wvf max length in [ticks]
+    PreTrg:           100
+}
+####################################################
+
+END_PROLOG

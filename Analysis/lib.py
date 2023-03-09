@@ -1,14 +1,14 @@
 import uproot
 import numpy as np
 
-def load_larsoft_root(wvf_type,path,root_folder,debug=False):
+def load_larsoft_root(wvf_type,path,root_folder,template,debug=False):
     output = dict()
     if wvf_type == "RAW":
-        output["PRETRIGGER"] = 0
+        output["PRETRIGGER"] = 98
         output["PEDESTAL"] = 1500
     
     elif wvf_type == "DEC":
-        output["PRETRIGGER"] = 100
+        output["PRETRIGGER"] = 98
         output["PEDESTAL"] = 0
     
     else:
@@ -24,8 +24,10 @@ def load_larsoft_root(wvf_type,path,root_folder,debug=False):
     try:
         raw_ch = raw["opdigi"]["PhotonData"]["photon_opCh"].array().to_numpy()[0]
         raw_npe = raw["opdigi"]["PhotonData"]["photon_pulse"].array().to_numpy()[0]
-        output["TRUE"]["CH"]  = raw_ch   
-        output["TRUE"]["PE"]  = raw_npe
+        output["TRUTH_CH"]  = raw_ch   
+        output["TRUTH_PE"]  = raw_npe
+        output["TRUE"]["PE"]  = []
+        output["TRUE"]["T0"]  = []
     except: 
         if debug: print("FILE DID NOT CONTAIN 'digispe' FOLDER")
 
@@ -59,8 +61,8 @@ def load_larsoft_root(wvf_type,path,root_folder,debug=False):
         npy_wvfs   = np.asarray(raw_wvfs)
         npy_wvfs_x = np.asarray(raw_wvfs_x)   
         output["RECO"]["PE"]     = np.sum(   npy_wvfs,axis=1)  
-        output["RECO"]["PETIMES"]= (np.argmax(npy_wvfs,axis=1))*output["SAMPLING"]
-        output["RECO"]["T0"]     = (np.argmax(npy_wvfs,axis=1)-output["PRETRIGGER"])*output["SAMPLING"]*1e6     
+        output["RECO"]["PETIMES"]= npy_wvfs_x[range(npy_wvfs_x.shape[0]),np.argmax(npy_wvfs,axis=1)]
+        output["RECO"]["T0"]     = npy_wvfs_x[range(npy_wvfs_x.shape[0]),np.argmax(npy_wvfs,axis=1)]   
         output["RECO"]["AMP"]    = np.max(   npy_wvfs,axis=1)      
         output["RECO"]["PED"]    = np.mean(  npy_wvfs[:,:output["PRETRIGGER"]]-output["PEDESTAL"],axis=1)      
         output["RECO"]["PEDSTD"] = np.std(   npy_wvfs[:,:output["PRETRIGGER"]]-output["PEDESTAL"],axis=1)
@@ -71,12 +73,18 @@ def load_larsoft_root(wvf_type,path,root_folder,debug=False):
             output["RECO"][key] = []
         for i in range(len(output["RECO"]["WVF"])):
             # print(len(photons_per_wvf[i]))
-            output["RECO"]["PE"].append(len(photons_per_wvf[i]))
-            output["RECO"]["PETIMES"].append(photons_per_wvf[i])
+            output["TRUE"]["PE"].append(len(photons_per_wvf[i]))
+            output["RECO"]["PE"].append(np.sum(np.asarray(raw_wvfs[i]-output["PEDESTAL"])[raw_wvfs[i]-output["PEDESTAL"] > 0])/np.sum(template[template > 0]))
+            # print("Sum of raw: %.2f vs su of template %.2f"%(np.sum(np.asarray(raw_wvfs[i]-output["PEDESTAL"])[raw_wvfs[i]-output["PEDESTAL"] > 0]),np.sum(template[template > 0])))
+            output["RECO"]["PETIMES"].append(photons_per_wvf[i]-photons_per_wvf[i][0])
             try:
-                output["RECO"]["T0"].append(photons_per_wvf[i][0])
+                output["TRUE"]["T0"].append(photons_per_wvf[i][0])
+                output["RECO"]["T0"].append(raw_wvfs_x[i][np.argmax(raw_wvfs[i])])
+
             except:
-                output["RECO"]["T0"].append([-1000])
+                output["TRUE"]["T0"].append([-1000])
+                output["RECO"]["T0"].append(raw_wvfs_x[i][np.argmax(raw_wvfs[i])])
+
             output["RECO"]["AMP"].append(np.max(raw_wvfs[i])-output["PEDESTAL"])      
             output["RECO"]["PED"].append(np.mean(raw_wvfs[i][:output["PRETRIGGER"]])-output["PEDESTAL"])      
             output["RECO"]["PEDSTD"].append(np.std(raw_wvfs[i][:output["PRETRIGGER"]])-output["PEDESTAL"])      
@@ -91,7 +99,7 @@ def photon_arrival_times(raw):
     for jj in range(len(raw["RECO"]["CH"])):
         min_wvf_time = np.min(raw["RECO"]["WVF_X"][jj])
         max_wvf_time = np.max(raw["RECO"]["WVF_X"][jj])
-        photons_per_channel = raw["TRUE"]["PE"][np.where(raw["TRUE"]["CH"] == raw["RECO"]["CH"][jj])]
+        photons_per_channel = raw["TRUTH_PE"][np.where(raw["TRUTH_CH"] == raw["RECO"]["CH"][jj])]
         photons_per_wvf.append(photons_per_channel[(photons_per_channel > min_wvf_time) & (photons_per_channel < max_wvf_time)])
     
     return photons_per_wvf

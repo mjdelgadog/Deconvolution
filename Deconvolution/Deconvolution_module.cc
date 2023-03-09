@@ -1,8 +1,8 @@
 // =========================================================
 // Deconvolution Module
-// @authors     : Daniele Guffanti, Maritza Delgado
+// @authors     : Daniele Guffanti, Maritza Delgado, Sergio Manthey Corchado
 // @created     : Jan 26, 2022 
-// Filter wiener-FFT
+// Filter wiener/gauss -FFT
 //========================================================= 
  
 #ifndef Deconvolution_h
@@ -107,20 +107,22 @@ namespace opdet {
           fhicl::Atom<short>       Pedestal{ fhicl::Name("Pedestal"), 1500}; 
           fhicl::Atom<std::string> DigiDataFile{ fhicl::Name("DigiDataFile") }; 
           fhicl::Atom<size_t>      DigiDataColumn{ fhicl::Name("DigiDataColumn"), 1 }; 
-          fhicl::Atom<Int_t>       Samples{ fhicl::Name("Samples"), 699 };
+          fhicl::Atom<Int_t>       Samples{ fhicl::Name("Samples"), 1000 };
           fhicl::Atom<Int_t>       PedestalBuffer{ fhicl::Name("PedestalBuffer"), 10 }; 
-          fhicl::Atom<Double_t>    Scale{ fhicl::Name("Scale") }; 
+          fhicl::Atom<Double_t>    Scale{ fhicl::Name("Scale"), 1 }; 
           fhicl::Atom<bool>        ApplyPrefilter{ fhicl::Name("ApplyPrefilter"), false };
           fhicl::Atom<bool>        AutoScale{ fhicl::Name("AutoScale"), false };
+          fhicl::Atom<std::string> OutputProduct{ fhicl::Name("OutputProduct"), "decowave"};
+
           struct Filter {
             fhicl::Atom<std::string> Name{fhicl::Name("Name"), "Gauss"};
-            fhicl::Atom<Double_t>    Cutoff{fhicl::Name("Cutoff"), 32};  
+            fhicl::Atom<Double_t>    Cutoff{fhicl::Name("Cutoff"), 2};  
           };
           fhicl::Table<Config::Filter> Filter{ fhicl::Name("WfmFilter") };
 
           struct Prefilter {
             fhicl::Atom<std::string> Name{fhicl::Name("Name"), "Gauss"}; 
-            fhicl::Atom<Double_t>    Cutoff{fhicl::Name("Cutoff")}; 
+            fhicl::Atom<Double_t>    Cutoff{fhicl::Name("Cutoff"), 2}; 
           }; 
           fhicl::Table<Config::Prefilter> Prefilter{ fhicl::Name("WfmPrefilter") };
       };
@@ -130,7 +132,7 @@ namespace opdet {
       //! Input signal shape model 
       enum EInputShape {kDelta = 0, kScint = 1};
       //! Waveform filter type
-      enum EFilterType {kOther = 0, kWiener = 1, kGauss = 2}; 
+      enum EFilterType {kOther = 0, kWiener = 1, kGauss = 2, kNone = 3}; 
 
       struct WfmPrefilter_t {
         TString fName; 
@@ -160,6 +162,7 @@ namespace opdet {
           fCutoff = config.Cutoff(); 
           if (fName == "Wiener") fType = kWiener; 
           else if (fName == "Gauss") fType = kGauss; 
+          // else if (fName == "None") fType = kNone; 
           else fType = kOther; 
         }
       };
@@ -222,7 +225,7 @@ namespace opdet {
         }
 
         //! Set the complex coefficient `i` given its real and imaginary part
-        inline void MakeCmplx(size_t i) { 
+        inline void MakeCmplx(size_t const i) { 
           fCmplx.at(i) = TComplex(fRe.at(i), fIm.at(i)); 
         }
 
@@ -241,7 +244,7 @@ namespace opdet {
         }
 
         //! Set the real and imaginary part of the coefficient `i` 
-        inline void MakeReAndIm(size_t i) {
+        inline void MakeReAndIm(size_t const i) {
           fRe.at(i) = fCmplx.at(i).Re(); 
           fIm.at(i) = fCmplx.at(i).Im(); 
         }
@@ -270,8 +273,8 @@ namespace opdet {
       std::string fInputModule;                 //!< Module used to create OpDetWaveforms
       std::string fInstanceName;                //!< Input tag for OpDetWaveforms collection
       double fSampleFreq;                       //!< Sampling frequency in MHz 
-      double  fTimeBegin;                       //!< Beginning of waveform in us
-      double  fTimeEnd;                         //!< End of waveform in us
+      //double  fTimeBegin;                       //!< Beginning of waveform in us
+      //double  fTimeEnd;                         //!< End of waveform in us
       short  fPedestal;                         //!< In ADC counts
       double  fLineNoiseRMS;                    //!< Pedestal RMS in ADC counts
       size_t fPreTrigger;                       //!< In ticks
@@ -287,9 +290,11 @@ namespace opdet {
                                                 //!< default is 10 ticks -> should be adapted to resulting peak width (after deconvolution).
       bool fApplyPrefilter;
       bool fAutoScale;
+      std::string fOutputProduct; 
       WfmPrefilter_t fPrefilterConfig;
       WfmFilter_t fFilterConfig; 
       EInputShape fInputShape = kDelta; 
+      // EInputShape fInputShape = kScint; 
 
       //----------------------------------------------------
       // Declare member functions
@@ -304,6 +309,8 @@ namespace opdet {
       void SourceSPEDigiDataFile(); 
       void BuildPrefilter(CmplxWaveform_t& xF0); 
       void ComputeExpectedInput(std::vector<double>& s, double nmax);
+      void CopyToOutput(const std::vector<float>& v, std::vector<float>& target); 
+      void CopyToOutput(const CmplxWaveform_t& v, std::vector<float>& target); 
       Double_t ComputeNormalization(CmplxWaveform_t& xGH); 
       TVirtualFFT* fft_r2c; 
       TVirtualFFT* fft_c2r; 
@@ -335,6 +342,7 @@ namespace opdet {
     fPedestalBuffer{ pars().PedestalBuffer()},
     fApplyPrefilter{ pars().ApplyPrefilter()},
     fAutoScale{ pars().AutoScale()},
+    fOutputProduct{ pars().OutputProduct() },
     fPrefilterConfig{ WfmPrefilter_t( pars().Prefilter()) }, 
     fFilterConfig{ WfmFilter_t( pars().Filter() ) }
   {  
@@ -355,8 +363,8 @@ namespace opdet {
 
     auto const detProp = art::ServiceHandle<detinfo::DetectorPropertiesService const>()->DataForJob(clockData);
 
-    fTimeBegin = 0; 
-    fTimeEnd   = detProp.ReadOutWindowSize() / clockData.TPCClock().Frequency();  
+    //fTimeBegin = 0; 
+    //fTimeEnd   = detProp.ReadOutWindowSize() / clockData.TPCClock().Frequency();  
 
     fft_r2c = TVirtualFFT::FFT(1, &fSamples, "M R2C K");
     fft_c2r = TVirtualFFT::FFT(1, &fSamples, "M C2R K");
@@ -391,12 +399,10 @@ namespace opdet {
 
     //pointer that will store produced Waveform
     auto out_wave = std::make_unique< std::vector< raw::OpDetWaveform > >();
-    auto out_decowave = std::make_unique< std::vector< recob::OpWaveform > >();
-    auto out_prefilter = std::make_unique< std::vector< recob::OpWaveform >>(); 
+    auto out_recob = std::make_unique< std::vector< recob::OpWaveform > >();
 
     std::vector<short unsigned int > out_digiwave(NOpDetWaveform); //vector in which the waveform will be saved
-    std::vector<float> out_recowave(NOpDetWaveform);               //vector in which the decowaveform will be saved, using float
-    std::vector<float> out_recopref(NOpDetWaveform); 
+    std::vector<float> out_recob_float(NOpDetWaveform);               //vector in which the decowaveform will be saved, using float
     std::vector<double> xv(fSamples, 0.); 
 
     //******************************
@@ -412,7 +418,7 @@ namespace opdet {
     fft_r2c->Transform();
     fft_r2c->GetPointsComplex(&xH.fRe[0], &xH.fIm[0]);
     xH.MakeCmplx(); 
-    if (fApplyPrefilter) { xH = xG0 * xH; }
+    if (fApplyPrefilter) { xH = xG0 * xH;}
 
     //******************************
     //--- Process waveforms
@@ -420,20 +426,21 @@ namespace opdet {
     for (auto const& wf: digi_wave) {
       CmplxWaveform_t xV(fSamples); 
       CmplxWaveform_t xS(fSamples); 
+      CmplxWaveform_t xN(fSamples); 
       CmplxWaveform_t xG(fSamples); 
       CmplxWaveform_t xY(fSamples); 
       CmplxWaveform_t xGH(fSamples); 
+      std::vector<float> xSNR(fSamples, 0.); 
+
       //----------------------------------------------------------- Resize wvfs
       if (static_cast<int>(wf.Waveform().size()) <= fSamples) { 
-        out_recowave.resize(fSamples,0); 
-        out_recopref.resize(fSamples,0); 
+        out_recob_float.resize(fSamples,0); 
       }
 
       else {
         printf("\nWARNING: waveform size is %lu, which is larger than fSamples (%i)\n", 
             wf.Waveform().size(), fSamples); 
-        out_recowave.resize(fSamples);
-        out_recopref.resize(fSamples); 
+        out_recob_float.resize(fSamples);
       }
 
       for (Int_t i= 0; i < fSamples; i++){
@@ -448,7 +455,8 @@ namespace opdet {
       // Found maximum peak in the Waveform
       Double_t SPE_Max = 0;
       double maxADC=*max_element(wf.begin(),wf.end());
-      double maxAmplit= maxADC-fPedestal;
+      // double maxAmplit= maxADC-fPedestal;
+      double maxAmplit= maxADC - fPedestal; // Pedestal already subtracted
       SPE_Max = maxAmplit/fSinglePEAmplitude;
       //printf("SPE_Max = (%g - %i) / %g = %g\n", 
           //maxADC, fPedestal, fSinglePEAmplitude, SPE_Max); 
@@ -472,70 +480,72 @@ namespace opdet {
 
       //******************************
       // Compute filters.
-      //******************************
-     
+      //******************************      
+
       Double_t fFrequencyCutOff = fFilterConfig.fCutoff; 
-      Double_t fTickCutOff = fSamples*fFrequencyCutOff/fSampleFreq; // Filter cutoff converted to ticks in frequency space.  
+      Double_t fTickCutOff = fSamples*fFrequencyCutOff/fSampleFreq;                       
+      // std::cout << fTickCutOff << std::endl;
       
       for (int i=0; i<fSamples*0.5+1; i++) {
         // Compute spectral density
         double H2 = xH.fCmplx.at(i).Rho2();
         double S2 = xS.fCmplx.at(i).Rho2();
         double N2 = fLineNoiseRMS * fLineNoiseRMS * fSamples ;
+        //if (i==0) {
+          //printf("SPE_Max = %g -> S2 = %g\n", SPE_Max, S2); 
+        //}
 
         if (fApplyPrefilter) {
           Double_t prefilter_PSD = xG0.fCmplx.at(i).Rho2(); 
           N2 *= prefilter_PSD;
         }
+        xN.fCmplx.at(i) = TComplex(sqrt(N2), 0.); 
 
         if (fFilterConfig.fType == Deconvolution::kWiener){
           // Compute Wiener filter
+          // std::cout << "wiener" << std::endl;
+          xSNR.at(i) = S2 / N2; 
           xG.fCmplx.at(i) = TComplex::Conjugate(xH.fCmplx.at(i))*S2 / (H2*S2 + N2);
         }
+
         else if (fFilterConfig.fType == Deconvolution::kGauss){
           // Compute gauss filter
+          // std::cout << "gauss" << std::endl;
           xG.fCmplx[0] = TComplex(0,0);
           xG.fCmplx.at(i) = TComplex::Exp(
-              -0.5*TMath::Power(i*1e-6*fSampleFreq/(fSamples*fTickCutOff),2))
+            -0.5*TMath::Power(i*fSampleFreq/(fSamples*fTickCutOff),2))
             /xH.fCmplx.at(i);
         }
-        else{
+
+        else if (fFilterConfig.fType == Deconvolution::kOther){
           // Compute dec signal
-          xG.fCmplx.at(i) = TComplex::Power(xH.fCmplx.at(i),-1);// Standard dec is just the division of signal and SPE template in Fourier space
+          // std::cout << "test" << std::endl;
+          xG.fCmplx.at(i) = TComplex(1,0)/xH.fCmplx.at(i); // Standard dec is just the division of signal and SPE template in Fourier space
         }
 
         // Correct template pretrigger (= phase shift in the freq domain)
-        TComplex phase = TComplex(0., -TMath::TwoPi()*i*fPreTrigger/(fSamples)); 
-        xG.fCmplx.at(i) = xG.fCmplx.at(i)*TComplex::Exp(phase);
+        //TComplex phase = TComplex(0., -TMath::TwoPi()*i*fPreTrigger/(fSamples)); 
+        //xG.fCmplx.at(i) = xG.fCmplx.at(i)*TComplex::Exp(phase);
         xG.MakeReAndIm(i); 
-        //printf("[%i] H2 = %g, N2 = %g, S2 = %g -> W2 = %g \n", 
-            //i, H2, N2, S2, xG.fCmplx.at(i).Rho2()); 
       }
 
       if (fApplyPrefilter) {xV = (xG0 * xV); xV.MakeReAndIm();}
 
       // Apply filter to the waveform
-      xY  = xG * xV; 
+      xY  = xG * xV;
+      xY.MakeReAndIm();
+
       // Apply filter to the detector response (for normalization)
       xGH = xG * xH; 
       xGH.MakeReAndIm(); 
-      xY.MakeReAndIm();
 
-      fft_c2r->SetPointsComplex(&xV.fRe.at(0), &xV.fIm.at(0)); 
-      fft_c2r->Transform(); 
-      Double_t* xPrefilter = fft_c2r->GetPointsReal(); 
       Double_t scale = 1.0 / fSamples;
       if (!fAutoScale) {scale = fScale;}
-
-      for (int i=0; i<fSamples; i++) {
-        out_recopref.at(i) = xPrefilter[i]*scale; 
-      }
 
       Double_t filter_norm = ComputeNormalization(xGH); 
       scale = filter_norm / (Double_t)fSamples;
       if (!fAutoScale) {scale = fScale;}
-
-      //printf("scale = %g/%i =  %g\n", filter_norm, fSamples, scale);  
+      // printf("scale = %g/%i =  %g\n", filter_norm, fSamples, scale);  
       //getchar(); 
 
       //Transform of the filtered signal
@@ -544,32 +554,47 @@ namespace opdet {
       double *xy = fft_c2r->GetPointsReal();
      
       // Correct baseline after deconvolution
-      double dec_pedestal = 0;
-      for (size_t i=0; i<fPreTrigger-fPedestalBuffer; i++){
-        dec_pedestal = dec_pedestal + xy[i];
-      }
-      dec_pedestal = dec_pedestal/int(fPreTrigger-fPedestalBuffer);
-      
+      double fDecPedestal = 0;
+      //for (size_t i=0; i<fPreTrigger-fPedestalBuffer; i++){
+        //fDecPedestal = fDecPedestal + xy[i];
+      //}
+      //fDecPedestal = fDecPedestal/int(fPreTrigger-fPedestalBuffer);
+
       for (int i=0; i<fSamples; i++){ 
-        out_recowave[i] = (xy[i]-dec_pedestal)*scale;
-        // out_recowave[i] = xy[i];
-        // std::cout << xy[i] << std::endl;
+        out_recob_float[i] = (xy[i]-fDecPedestal)*scale;
+      }
+
+      if (strcmp(fOutputProduct.c_str(), "H")==0) {
+        CopyToOutput(xH, out_recob_float); 
+      } else if (strcmp(fOutputProduct.c_str(), "S") == 0) {
+        CopyToOutput(xS, out_recob_float); 
+      } else if (strcmp(fOutputProduct.c_str(), "N") == 0) {
+        CopyToOutput(xN, out_recob_float); 
+      } else if (strcmp(fOutputProduct.c_str(), "G0") == 0) {
+        CopyToOutput(xG0, out_recob_float); 
+      } else if (strcmp(fOutputProduct.c_str(), "V") == 0) {
+        CopyToOutput(xV, out_recob_float); 
+      } else if (strcmp(fOutputProduct.c_str(), "v") == 0) {
+        fft_c2r->SetPointsComplex(&xV.fRe[0], &xV.fIm[0]); 
+        fft_c2r->Transform(); 
+        Double_t* vv = fft_c2r->GetPointsReal(); 
+        for (int i=0; i<fSamples; i++) out_recob_float.at(i) = scale* vv[i]; 
+      } else if (strcmp(fOutputProduct.c_str(), "SNR")==0) {
+        CopyToOutput(xSNR, out_recob_float); 
+      } else if (strcmp(fOutputProduct.c_str(), "G")==0) {
+        CopyToOutput(xG, out_recob_float);
       }
 
       raw::OpDetWaveform dgwave( wf.TimeStamp(), wf.ChannelNumber(), out_digiwave );
       out_wave->emplace_back(std::move(dgwave));
 
-      recob::OpWaveform decpref(wf.TimeStamp(), wf.ChannelNumber(), out_recopref );
-      out_prefilter->emplace_back(std::move(decpref));   
-
-      recob::OpWaveform decwav(wf.TimeStamp(), wf.ChannelNumber(), out_recowave );
-      out_decowave->emplace_back(std::move(decwav));   
+      recob::OpWaveform decwav(wf.TimeStamp(), wf.ChannelNumber(), out_recob_float );
+      out_recob->emplace_back(std::move(decwav));   
     }//waveforms loop
 
     // Push the OpDetWaveforms and OpWaveform into the event
     evt.put(std::move(out_wave));
-    //evt.put(std::move(out_prefilter)); 
-    evt.put(std::move(out_decowave));
+    evt.put(std::move(out_recob));
     WfDeco++;
   }
 
@@ -595,16 +620,18 @@ namespace opdet {
     const Double_t cutoff   = fPrefilterConfig.fCutoff / df; 
     const Double_t k_cutoff = sqrt(log(2)); 
     const double sigma = fSamples * k_cutoff / (TMath::TwoPi() * cutoff);
-    const int    mu    = 4*sigma; 
+    const int    mu    = 0.5*fSamples; 
 
     printf("Deconvolution::BuildPrefilter sigma is %g\n", sigma); 
 
     std::vector<Double_t> xf(fSamples, 0.);
-    for (int i=0; i<fSamples; i++) xf.at(i) = TMath::Gaus(i, mu, sigma, kTRUE); 
+    for (int i=0; i<fSamples; i++) {
+      xf.at(i) = TMath::Gaus(i, mu, sigma, kTRUE); 
+    }
 
     std::vector<Double_t> re_(fSamples, 0.); 
     std::vector<Double_t> im_(fSamples, 0.);
-  
+
     fft_r2c->SetPoints(&xf[0]); 
     fft_r2c->Transform(); 
     fft_r2c->GetPointsComplex(&re_[0], &im_[0]);
@@ -626,7 +653,7 @@ namespace opdet {
     return; 
   }
 
-  
+
   /**
    * @brief Compute expected input signal
    *
@@ -646,19 +673,20 @@ namespace opdet {
       std::vector<double>SignalScint={Larprop->ScintYieldRatio(),1.-Larprop->ScintYieldRatio()};
 
       double dt = 1/fSampleFreq; 
-      double t = fTimeBegin;
+      double t = 0.;
 
       for (size_t i=0; i<s.size(); i++) {
         double lightsignal=0;
         for (size_t j=0; j<SignalTime.size();j++){
           lightsignal+=SignalScint[j]*exp(-t/SignalTime[j]);
         }
-        s.at(i) = nmax*lightsignal; 
+        // s.at(i) = nmax*lightsignal; 
+        s.at(i) = lightsignal; 
         t+=dt; 
       }
     }
     else if (fInputShape == kDelta) {
-      s.at(1) = nmax; 
+      s.at(fSamples*0.5) = nmax; 
     }
     else {
       printf("Deconvolution::ComputeExpectedInput WARNING\n"); 
@@ -712,8 +740,8 @@ namespace opdet {
 
     // Set single p.e. maximum value
     fSinglePEAmplitude = TMath::Max(1.0, 
-      *(std::max_element(fSinglePEWaveform.begin(), fSinglePEWaveform.end()))); 
-
+        *(std::max_element(fSinglePEWaveform.begin(), fSinglePEWaveform.end()))); 
+    std::cout << "SPE Amplitude: " << fSinglePEAmplitude << std::endl;
     return;
   }
 
@@ -727,7 +755,7 @@ namespace opdet {
   int Deconvolution::CountFileColumns(const char* file_path) {
     std::ifstream file_; 
     file_.open(file_path); 
-    
+
     if (!file_.is_open()) {
       printf("Deconvolution::CountFileColumns(%s) ERROR:\n", 
           file_path); 
@@ -811,4 +839,14 @@ namespace opdet {
     return 1.0 / norm; 
   }
 
+  void Deconvolution::CopyToOutput(const std::vector<float>& v, std::vector<float>& target) {
+    target.assign(v.begin(), v.end());
+    return;
+  }
+  void Deconvolution::CopyToOutput(const CmplxWaveform_t& v, std::vector<float>& target) {
+    for (int i=0; i<v.fCmplx.size(); i++) {
+      target.at(i) = v.fCmplx.at(i).Rho2(); 
+    }
+    return; 
+  }
 } // namespace opdet

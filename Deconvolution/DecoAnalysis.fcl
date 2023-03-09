@@ -1,0 +1,15 @@
+BEGIN_PROLOG
+
+standard_deco_analysis:
+   {
+     module_type:            "DecoAnalysis"
+     InputModule:            "opdec"   //deconvolution module
+     InstanceName:           "" 
+     ZeroSupThresh:           0.5
+   
+     #MakeBipolarHist:         true
+     #MakeUnipolarHist:        true
+   }
+
+
+END_PROLOG

@@ -58,8 +58,8 @@ namespace opdet {
       std::string fInputModule;              // Input tag for OpDet collection
       std::string fInstanceName;             // Input tag for OpDet collection
       double fSampleFreq;                     // in MHz
-      float fTimeBegin;                      // in us
-      float fTimeEnd;                        // in us
+      //float fTimeBegin;                      // in us
+      //float fTimeEnd;                        // in us
   };  
 } 
 
@@ -113,6 +113,9 @@ namespace opdet {
     // std::cout << "Event #" << evt.id().event()  << ", firstTime: " << firstWaveformTime << std::endl; 
     for (auto const& decowaveform : *deconv){
       int channel = decowaveform.Channel();
+
+      // Increase counter for number of waveforms on this optical channel
+      mapChannelWF[channel]++;
 
       // Implement different end time for waveforms of variable length
       //  double startTime = double(decowaveform.TimeStamp().GetTimeStamp()) - firstWaveformTime;

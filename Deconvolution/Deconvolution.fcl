@@ -1,0 +1,57 @@
+BEGIN_PROLOG
+standard_deconvolution:{
+  module_type:       "Deconvolution"
+  InputModule:       "opdigi"
+  InstanceName:      ""    
+
+  LineNoiseRMS:      3        # Pedestal RMS in [ADC] counts, likely an underestimate
+  TimeBegin:         0        # In [us] 
+  TimeEnd:           16       # In [us] 
+  PreTrigger:        100      # In [ticks] 25
+  Pedestal:          1500     # In [ADC]
+  Samples:           1000     # Timewindow in [ticks]
+  PedestalBuffer:    20       # In [ticks], should always be smaller than PreTrigger!
+  Scale:             0.001        # Sacilng of resulting wvfs                     
+  DigiDataFile:      "fbk_decon.txt"    
+  DigiDataColumn:    0
+  
+  AutoScale:         true     # Scaling based on SPE amp. from template 
+  ApplyPrefilter:    false    # Filter the waveforms before deconvolution 
+
+  WfmPrefilter: {
+    Name: "Gauss"
+    Cutoff: 2.              # In MHz
+  }
+
+  WfmFilter: {
+    Name: "Wiener"
+    Cutoff: 1.
+  }
+}
+
+
+deconvolution_snr: @local::standard_deconvolution
+deconvolution_snr.OutputProduct: "SNR"
+
+deconvolution_H: @local::standard_deconvolution
+deconvolution_H.OutputProduct: "H"
+
+deconvolution_S: @local::standard_deconvolution
+deconvolution_S.OutputProduct: "S"
+
+deconvolution_N: @local::standard_deconvolution
+deconvolution_N.OutputProduct: "N"
+
+deconvolution_G0: @local::standard_deconvolution
+deconvolution_G0.OutputProduct: "G0"
+
+deconvolution_G: @local::standard_deconvolution
+deconvolution_G.OutputProduct: "G"
+
+deconvolution_V: @local::standard_deconvolution
+deconvolution_V.OutputProduct: "V"
+
+deconvolution_v: @local::standard_deconvolution
+deconvolution_v.OutputProduct: "v"
+
+END_PROLOG

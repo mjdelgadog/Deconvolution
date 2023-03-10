@@ -2,7 +2,7 @@
 // Deconvolution Module
 // @authors     : Daniele Guffanti, Maritza Delgado, Sergio Manthey Corchado
 // @created     : Jan 26, 2022 
-// Filter wiener/gauss -FFT
+// Filter wiener-FFT
 //========================================================= 
  
 #ifndef Deconvolution_h
@@ -514,8 +514,8 @@ namespace opdet {
         }
 
         // Correct template pretrigger (= phase shift in the freq domain)
-        TComplex phase = TComplex(0., -TMath::TwoPi()*i*fPreTrigger/(fSamples)); 
-        xG.fCmplx.at(i) = xG.fCmplx.at(i)*TComplex::Exp(phase);
+        // TComplex phase = TComplex(0., -TMath::TwoPi()*i*fPreTrigger/(fSamples)); 
+        // xG.fCmplx.at(i) = xG.fCmplx.at(i)*TComplex::Exp(phase);
         xG.MakeReAndIm(i); 
       }
 

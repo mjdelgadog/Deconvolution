@@ -844,7 +844,7 @@ namespace opdet {
     return;
   }
   void Deconvolution::CopyToOutput(const CmplxWaveform_t& v, std::vector<float>& target) {
-    for (int i=0; i<v.fCmplx.size(); i++) {
+    for (size_t i=0; i<v.fCmplx.size(); i++) {
       target.at(i) = v.fCmplx.at(i).Rho2(); 
     }
     return; 

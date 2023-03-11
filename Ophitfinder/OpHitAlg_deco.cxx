@@ -27,6 +27,47 @@
 
 namespace opdet {
   //----------------------------------------------------------------------------
+  void RunHitFinder(std::vector<raw::OpDetWaveform> const& opDetWaveformVector,
+                    std::vector<recob::OpHit>& hitVector,
+                    pmtana::PulseRecoManager const& pulseRecoMgr,
+                    pmtana::PMTPulseRecoBase const& threshAlg,
+                    geo::GeometryCore const& geometry,
+                    float hitThreshold,
+                    detinfo::DetectorClocksData const& clocksData,
+                    calib::IPhotonCalibrator const& calibrator,
+                    bool use_start_time)
+  {
+
+    for (auto const& waveform : opDetWaveformVector) {
+
+      const int channel = static_cast<int>(waveform.ChannelNumber());
+
+      if (!geometry.IsValidOpChannel(channel)) {
+        mf::LogError("OpHitFinder")
+          << "Error! unrecognized channel number " << channel << ". Ignoring pulse";
+        continue;
+      }
+
+      pulseRecoMgr.Reconstruct(waveform);
+
+      // Get the result
+      auto const& pulses = threshAlg.GetPulses();
+
+      const double timeStamp = waveform.TimeStamp();
+
+      for (auto const& pulse : pulses)
+        ConstructHit(hitThreshold,
+                     channel,
+                     timeStamp,
+                     pulse,
+                     hitVector,
+                     clocksData,
+                     calibrator,
+                     use_start_time);
+    }
+  }
+
+  //----------------------------------------------------------------------------
   void RunHitFinder_deco(std::vector<recob::OpWaveform>const& opWaveformVector,
                     std::vector<recob::OpHit>& hitVector,
                     pmtana::PulseRecoManager const& pulseRecoMgr,
@@ -48,9 +89,9 @@ namespace opdet {
         continue;
       }
       
-      std::vector<short> short_deco_waveform(deco_waveform.Signal().begin(),deco_waveform.Signal().end());
-      
+      std::vector<short int> short_deco_waveform(deco_waveform.Signal().begin(),deco_waveform.Signal().end());
       pulseRecoMgr.Reconstruct(short_deco_waveform);
+       
 
       // Get the result
       auto const& pulses = threshAlg.GetPulses();

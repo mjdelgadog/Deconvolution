@@ -89,10 +89,14 @@ namespace opdet {
         continue;
       }
       
-      std::vector<short int> short_deco_waveform(deco_waveform.Signal().begin(),deco_waveform.Signal().end());
+      std::vector<short int> short_deco_waveform;
+      for (unsigned int i_tick=0; i_tick < deco_waveform.Signal().size(); ++i_tick)
+      {
+      short_deco_waveform.emplace_back(static_cast<short int>(deco_waveform.Signal().at(i_tick)));
+      }
+         
       pulseRecoMgr.Reconstruct(short_deco_waveform);
-       
-
+      
       // Get the result
       auto const& pulses = threshAlg.GetPulses();
 

@@ -11,12 +11,19 @@ standard_deconvolution:{
   Pedestal:          1500     # In [ADC]
   Samples:           1000     # Timewindow in [ticks]
   PedestalBuffer:    20       # In [ticks], should always be smaller than PreTrigger!
-  Scale:             0.001        # Sacilng of resulting wvfs                     
+  Scale:             0.001    # Sacilng of resulting wvfs                     
   DigiDataFile:      "fbk_decon.txt"    
   DigiDataColumn:    0
   
-  AutoScale:         true     # Scaling based on SPE amp. from template 
-  ApplyPrefilter:    false    # Filter the waveforms before deconvolution 
+  AutoScale:         true      # Scaling based on SPE amp. from template 
+  ApplyPrefilter:    false     # Filter the waveforms before deconvolution 
+  ApplyPostfilter:   true      # Filter the waveforms after deconvolution
+  ApplyPostBLCorrection: false # Correct baseline after the deconvolution process
+
+  WfmPostfilter: {
+    Name: "Gauss"
+    Cutoff: 2.2              # In MHz
+  }
 
   WfmPrefilter: {
     Name: "Gauss"
@@ -44,6 +51,9 @@ deconvolution_N.OutputProduct: "N"
 
 deconvolution_G0: @local::standard_deconvolution
 deconvolution_G0.OutputProduct: "G0"
+
+deconvolution_G1: @local::standard_deconvolution
+deconvolution_G1.OutputProduct: "G1"
 
 deconvolution_G: @local::standard_deconvolution
 deconvolution_G.OutputProduct: "G"

@@ -22,7 +22,6 @@
 #include "art/Framework/Services/Registry/ServiceHandle.h"
 #include "art_root_io/TFileService.h"
 #include "canvas/Persistency/Common/FindManyP.h"
-#include "canvas/Persistency/Common/Ptr.h"
 #include "fhiclcpp/ParameterSet.h"
 #include "art_root_io/TFileDirectory.h"
 #include "messagefacility/MessageLogger/MessageLogger.h"
@@ -56,44 +55,54 @@ namespace opdet {
     void analyze(const art::Event&);
 
   private:
-    // The stuff below is the part you'll most likely have to change to
-    // go from this custom example to your own task.
-
+    
     // The parameters we'll read from the .fcl file.
-    std::string fInputModule; // Input tag for OpDet collection
-    std::string fInstanceName;             // Input tag for OpDet collection
-    double fSampleFreq;               // in MHz
-    float fTimeBegin;                // in us
-    float fTimeEnd;                  // in us
-
-    // Flags to enable or disable output of debugging TH1 / TH2s
-    //bool fMakeHistPerChannel;
-    //bool fMakeHistAllChannels;
-    //bool fMakeHitTree;
+    std::string fInputModule;    // Input tag for OpDet collection
+    std::string fInstanceName;   // Input tag for OpDet collection
+    double fSampleFreq;          // in MHz
+    float fTimeBegin;            // in us
+    float fTimeEnd;              // in us
+     
+    // Flags to enable or disable output of debugging 
+    bool fMakePerOpHitTree;
+    bool fMakePerChannelTree;
+      
+    TTree* fPerOpHitTree;
+    TTree* fPerChannelTree;
 
     // Output TTree and its branch variables
-    TTree* fHitTree;
+    
     Int_t fEventID;
+    Int_t fHitID;
+    Int_t fOpChannelID;
+    //std::vector<int> fOpChannel;
+    //std::vector<float> fPeakTime;
+    //std::vector<float> fPE;
     Int_t fOpChannel;
-    Float_t fPeakTime;
-    Float_t fNPe;
-    
-    double GetDriftWindow(detinfo::DetectorPropertiesData const& detProp) const;
-    
+    Double_t fPeakTimeAbs;
+    Double_t fPeakTime;
+    Int_t fFrame;
+    Float_t fWidth;
+    Float_t fArea;
+    Float_t fAmplitude;
+    Int_t fHit;
+    Float_t fPE;
+    Float_t fFastToTotal;
+       
   };
 
 }
 
 #endif
 
-namespace opdet {
+ namespace opdet {
 
   DEFINE_ART_MODULE(OpHitFindAna)
 
-}
+ }
 
 
-namespace opdet {
+ namespace opdet {
 
   //-----------------------------------------------------------------------
   // Constructor
@@ -103,36 +112,52 @@ namespace opdet {
     // Indicate that the Input Module comes from .fcl
     fInputModule  =   pset.get< std::string >("InputModule");
     fInstanceName =   pset.get< std::string >("InstanceName");
-    // Obtain parameters from DetectorClocksService
+    
+    art::ServiceHandle<art::TFileService const> tfs;
     
     // Obtaining parameters from the DetectorClocksService
     auto const clockData = art::ServiceHandle<detinfo::DetectorClocksService const>()->DataForJob();
-    auto const detProp = art::ServiceHandle<detinfo::DetectorPropertiesService const>()->DataForJob(clockData);
+    fTimeBegin = clockData.OpticalClock().Time();
+    fTimeEnd = clockData.OpticalClock().FramePeriod();
     fSampleFreq = clockData.OpticalClock().Frequency();
-    fTimeEnd   = detProp.ReadOutWindowSize() / clockData.TPCClock().Frequency();
+    //fTimeEnd   = detProp.ReadOutWindowSize() / clockData.TPCClock().Frequency();*/
     // Assume the readout is symmetrical around 0
-    fTimeBegin = -1.*fTimeEnd;
+    // fTimeBegin = -1.*fTimeEnd;
     
-    //fMakeHistPerChannel = pset.get<bool>("MakeHistPerChannel");
-    //fMakeHistAllChannels = pset.get<bool>("MakeHistAllChannels");
-    //fMakeHitTree = pset.get<bool>("MakeHitTree");
+    fMakePerOpHitTree   = pset.get<bool>("MakePerOpHitTree");
+    fMakePerChannelTree = pset.get<bool>("MakePerChannelTree");
 
     // If required, make TTree for output
 
-    //if (fMakeHitTree) {
-      art::ServiceHandle<art::TFileService const> tfs;
-      fHitTree = tfs->make<TTree>("HitTree", "HitTree");
-      fHitTree->Branch("EventID", &fEventID, "EventID/I");
-      fHitTree->Branch("OpChannel", &fOpChannel, "OpChannel/I");
-      fHitTree->Branch("PeakTime", &fPeakTime, "PeakTime/F");
-      fHitTree->Branch("NPe", &fNPe, "NPe/F");
-     //}
-   //  art::ServiceHandle< art::TFileService > tfs;
+    if (fMakePerOpHitTree) {
+      fPerOpHitTree = tfs->make<TTree>("PerOpHitTree", "PerOpHitTree");
+      fPerOpHitTree->Branch("EventID", &fEventID, "EventID/I");
+      fPerOpHitTree->Branch("HitID", &fHitID, "HitID/I");
+      fPerOpHitTree->Branch("OpChannel", &fOpChannel, "OpChannel/I");
+      fPerOpHitTree->Branch("PeakTimeAbs", &fPeakTimeAbs, "PeakTimeAbs/D");
+      fPerOpHitTree->Branch("PeakTime", &fPeakTime, "PeakTime/D");
+      fPerOpHitTree->Branch("Frame", &fFrame, "Frame/I");
+      fPerOpHitTree->Branch("Width", &fWidth, "Width/F");
+      fPerOpHitTree->Branch("Area", &fArea, "Area/F");
+      fPerOpHitTree->Branch("Amplitude", &fAmplitude, "Amplitude/F");
+      fPerOpHitTree->Branch("PE", &fPE, "PE/F");
+      fPerOpHitTree->Branch("FastToTotal", &fFastToTotal, "FastToTotal/F");
+    }
+    
+    if (fMakePerChannelTree) {
+      fPerChannelTree = tfs->make<TTree>("PerChannelTree", "PerChannelTree");
+      fPerChannelTree->Branch("OpChannel", &fOpChannel, "OpChannel/I");
+      fPerChannelTree->Branch("PeakTime", &fPeakTime, "PeakTime/D");
+      fPerChannelTree->Branch("PE", &fPE, "PE/F");
+     }
+    
+       
   }
  
   //-----------------------------------------------------------------------
-  // Destructor
-  OpHitFindAna::~OpHitFindAna() {  
+  // Destructor 
+  OpHitFindAna::~OpHitFindAna() 
+  {  
   }    
   
   //-----------------------------------------------------------------------
@@ -140,40 +165,48 @@ namespace opdet {
   {
 
     // Create a handle for our vector of pulses
-    art::Handle<std::vector<recob::OpHit>> HitHandle;
-
+    art::Handle<std::vector<recob::OpHit>> OpHitHandle;
     
     // Read in HitHandle
-    evt.getByLabel(fInputModule, HitHandle);
+    evt.getByLabel(fInputModule, OpHitHandle);
 
     // Access ART's TFileService, which will handle creating and writing
-    // histograms for us.
     art::ServiceHandle<art::TFileService const> tfs;
 
-    art::ServiceHandle<geo::Geometry const> geom;
-    int NOpChannels = geom->NOpChannels();
-    
-    
-    for (int i = 0; i != NOpChannels; ++i) {
-      //space for create histogram
-    }
-
     fEventID = evt.id().event();
-
+    
+    art::ServiceHandle<geo::Geometry const> geom;
+   // int NOpChannels = geom->NOpChannels();
+    
+    
     // For every OpHit in the vector
-    for (unsigned int i = 0; i < HitHandle->size(); ++i) {
-      // Get OpHit
-      art::Ptr<recob::OpHit> TheHitPtr(HitHandle, i);
-      recob::OpHit TheHit = *TheHitPtr;
-
-      fOpChannel = TheHit.OpChannel();
-      fNPe = TheHit.PE();
-      fPeakTime = TheHit.PeakTime();
-
-      fHitTree->Fill();
-
-     }
-  }
-
+    
+    if (fMakePerOpHitTree) {
+        for (size_t i = 0; i != OpHitHandle->size(); ++i) {
+          fOpChannel = OpHitHandle->at(i).OpChannel();
+          fPeakTimeAbs = OpHitHandle->at(i).PeakTimeAbs();
+          fPeakTime = OpHitHandle->at(i).PeakTime();
+          fFrame = OpHitHandle->at(i).Frame();
+          fWidth = OpHitHandle->at(i).Width();
+          fArea = OpHitHandle->at(i).Area();
+          fAmplitude = OpHitHandle->at(i).Amplitude();
+          fPE = OpHitHandle->at(i).PE();
+          fFastToTotal = OpHitHandle->at(i).FastToTotal();
+          fHitID = i;
+          fPerOpHitTree->Fill();
+        }
+      }
+   
+           
+        if (fMakePerChannelTree) {
+         for (size_t i = 0; i != OpHitHandle->size(); ++i) {
+            fOpChannel = OpHitHandle->at(i).OpChannel();
+            fPE = OpHitHandle->at(i).PE();
+            fPeakTime = OpHitHandle->at(i).PeakTime();
+            fPerChannelTree->Fill();
+           }
+        }
+   }
+    
 } // namespace opdet
 

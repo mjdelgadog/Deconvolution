@@ -5,16 +5,13 @@ standard_ophitfindana:
      module_type:            "OpHitFindAna"
      InputModule:            "ophitspe"   #ophitfinder module
      InstanceName:           ""
-     
-     TimeBegin:            0           # In us 
-     TimeEnd:              1600        # In us 
-     
-    #fMakeHistPerChannel:false   //TODO
-     #fMakeHistAllChannels:false
-     #fMakeHitTree:true
+
+     MakePerOpHitTree:       true
+     MakePerChannelTree:     true
 
 
    }
 
 
 END_PROLOG
+

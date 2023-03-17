@@ -157,7 +157,7 @@ void plot_maker(const char* raw_file, const char* wdec_file_pf, const char* wdec
   t->Branch("wpulse_pe", &wpulse_pe);
 
   TCanvas* ctest = new TCanvas("ctest", "test", 0, 0, 800, 700); 
-  bool vis = true; 
+  bool vis = false; 
 
   auto shift_hist = [](const TH1* h, const int ishift) {
     TH1D* hh = (TH1D*)h->Clone(); 
@@ -190,6 +190,7 @@ void plot_maker(const char* raw_file, const char* wdec_file_pf, const char* wdec
     printf("event 1: opchannel %i - wv %i: %s\n", iCh, iWv, hraw_name.Data()); 
 
     TH1D* hraw = (TH1D*)raw->Get(hraw_name); 
+    if (!hraw) continue;
 
     double tmin = hraw->GetXaxis()->GetXmin(); 
     double tmax = hraw->GetXaxis()->GetXmax(); 
@@ -200,7 +201,7 @@ void plot_maker(const char* raw_file, const char* wdec_file_pf, const char* wdec
     wdec_pe = hwdec_pf->Integral(); 
     wpulse_pe = 0.; 
 
-    double spt_thrs = TMath::Min(0.9, 0.15 / hwdec_pf->GetMaximum()); 
+    double spt_thrs = TMath::Min(0.9, 0.12 / hwdec_pf->GetMaximum()); 
     auto peaks = find_peaks(hwdec_pf, 0.15); 
 
     if (true_pe>500) {
@@ -211,7 +212,7 @@ void plot_maker(const char* raw_file, const char* wdec_file_pf, const char* wdec
     auto hintegral = new std::vector<TH1*>;
     if (peaks) {
       printf("%i peaks found - thrs: %g\n", peaks->GetN(), spt_thrs); 
-      wpulse_pe = find_pe_by_charge(hwdec_pf, peaks/*, hintegral*/);
+      wpulse_pe = find_pe_by_charge(hwdec_pf, peaks, hintegral);
     }
     else printf("No peaks found\n"); 
 

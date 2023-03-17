@@ -317,9 +317,14 @@ namespace opdet {
       void ComputeExpectedInput(std::vector<double>& s, double nmax);
       void CopyToOutput(const std::vector<float>& v, std::vector<float>& target); 
       void CopyToOutput(const CmplxWaveform_t& v, std::vector<float>& target); 
-      Double_t ComputeNormalization(CmplxWaveform_t& xGH, const float thrs=0); 
+      Double_t ComputeAutoNormalization(CmplxWaveform_t& xGH, const float thrs=0); 
       TVirtualFFT* fft_r2c; 
       TVirtualFFT* fft_c2r; 
+      TVirtualFFT* fftextra_r2c; 
+      TVirtualFFT* fftextra_c2r; 
+      int  fExtraSamples;
+      CmplxWaveform_t fxG0; 
+      CmplxWaveform_t fxG1; 
   };
 }
 #endif
@@ -353,7 +358,9 @@ namespace opdet {
     fOutputProduct{ pars().OutputProduct() },
     fPrefilterConfig{ WfmExtraFilter_t( pars().Prefilter()) }, 
     fPostfilterConfig{ WfmExtraFilter_t( pars().Postfilter()) }, 
-    fFilterConfig{ WfmFilter_t( pars().Filter() ) }
+    fFilterConfig{ WfmFilter_t( pars().Filter() ) }, 
+    fxG0(fSamples), 
+    fxG1(fSamples)
   {  
 
     WfDeco=0;  
@@ -375,10 +382,20 @@ namespace opdet {
     fTimeBegin = 0; 
     fTimeEnd   = detProp.ReadOutWindowSize() / clockData.TPCClock().Frequency();  
 
+    fExtraSamples = 2*fSamples;
+
     fft_r2c = TVirtualFFT::FFT(1, &fSamples, "M R2C K");
     fft_c2r = TVirtualFFT::FFT(1, &fSamples, "M C2R K");
+    fftextra_r2c = TVirtualFFT::FFT(1, &fExtraSamples, "M R2C K"); 
+    fftextra_c2r = TVirtualFFT::FFT(1, &fExtraSamples, "M C2R K"); 
 
     SourceSPEDigiDataFile(); 
+
+    // build pre and/or post filter (if required)
+    if (fApplyPrefilter ) BuildExtraFilter(fxG0, fPrefilterConfig );
+    if (fApplyPostfilter) BuildExtraFilter(fxG1, fPostfilterConfig); 
+
+
   }
 
   //---------------------------------------------------------------------------
@@ -386,6 +403,8 @@ namespace opdet {
   Deconvolution::~Deconvolution(){
     delete fft_r2c; 
     delete fft_c2r;
+    delete fftextra_c2r; 
+    delete fftextra_r2c; 
   }    
 
 
@@ -417,10 +436,6 @@ namespace opdet {
     //******************************
     //--- Setup filter's components 
     //******************************
-    CmplxWaveform_t xG0(fSamples); 
-    CmplxWaveform_t xG1(fSamples); 
-    if (fApplyPrefilter ) BuildExtraFilter(xG0, fPrefilterConfig );
-    if (fApplyPostfilter) BuildExtraFilter(xG1, fPostfilterConfig); 
 
     // xH: FFT of spe response
     std::vector<double> xh(fSinglePEWaveform);
@@ -429,7 +444,7 @@ namespace opdet {
     fft_r2c->Transform();
     fft_r2c->GetPointsComplex(&xH.fRe[0], &xH.fIm[0]);
     xH.MakeCmplx(); 
-    if (fApplyPrefilter) { xH = xG0 * xH;}
+    if (fApplyPrefilter) { xH = fxG0 * xH;}
 
     //******************************
     //--- Process waveforms
@@ -506,7 +521,7 @@ namespace opdet {
         //}
 
         if (fApplyPrefilter) {
-          Double_t prefilter_PSD = xG0.fCmplx.at(i).Rho2(); 
+          Double_t prefilter_PSD = fxG0.fCmplx.at(i).Rho2(); 
           N2 *= prefilter_PSD;
         }
         xN.fCmplx.at(i) = TComplex(sqrt(N2), 0.); 
@@ -540,7 +555,7 @@ namespace opdet {
       }
 
       // Apply filter to the waveform
-      if (fApplyPrefilter) {xV = (xG0 * xV); xV.MakeReAndIm();}
+      if (fApplyPrefilter) {xV = (fxG0 * xV); xV.MakeReAndIm();}
       xY  = xG * xV;
       xY.MakeReAndIm();
 
@@ -550,54 +565,54 @@ namespace opdet {
       double *xy = fft_c2r->GetPointsReal();
       std::vector<double> xvdec(xy, xy+fSamples); 
      
-      // Correct baseline after deconvolution
-      double decPedestal = 0;
-      if (fApplyPostBLCorr) {
-        for (size_t i=0; i<fPreTrigger-fPedestalBuffer; i++){
-          decPedestal = decPedestal + xvdec[i];
-        }
-        decPedestal = decPedestal/int(fPreTrigger-fPedestalBuffer);
-      }
-
       Double_t scale = 1.0 / fSamples;
       if (!fAutoScale) {scale = fScale;} 
       else {
         // Apply filter to the detector response (for normalization)
         xGH = xG * xH; 
         xGH.MakeReAndIm(); 
-        Double_t filter_norm = ComputeNormalization(xGH, decPedestal); 
+        Double_t filter_norm = ComputeAutoNormalization(xGH); 
         scale = filter_norm / (Double_t)fSamples;
       }
 
-      // printf("scale = %g/%i =  %g\n", filter_norm, fSamples, scale);  
-      //getchar(); 
-      
-      printf("pe_max = %g - dec_pedestal = %g - scale = %g * 0.001\n", 
-          SPE_Max, decPedestal, scale / 0.001); 
-
-      for (int i=0; i<fSamples; i++){ 
-        if (i<10) printf("xy[%i] = %g\n", i, xvdec[i]); 
-        out_recob_float[i] = (xvdec[i]-decPedestal)*scale;
-      }
 
       if (fApplyPostfilter) {
         CmplxWaveform_t xxY(fSamples); 
-        std::vector<double> ytmp(out_recob_float.begin(), out_recob_float.end()); 
+        std::vector<double> ytmp(xvdec.begin(), xvdec.end()); 
+        //ytmp.resize(fSamples, 0.); 
         fft_r2c->SetPoints(&ytmp[0]); 
         fft_r2c->Transform(); 
         fft_r2c->GetPointsComplex(&xxY.fRe[0], &xxY.fIm[0]); 
         xxY.MakeCmplx(); 
-        xxY = xxY * xG1; 
+        xxY = xxY * fxG1; 
         xxY.MakeReAndIm(); 
         fft_c2r->SetPointsComplex(&xxY.fRe[0], &xxY.fIm[0]); 
         fft_c2r->Transform(); 
-        xy = fft_c2r->GetPointsReal(); 
+        double* xxy = fft_c2r->GetPointsReal(); 
         double g1_scale = 1.0 / fSamples; 
         for (int i=0; i<fSamples; i++) {
-          out_recob_float[i] = (xy[i] * g1_scale); 
+          xvdec[i] = (xxy[i] * g1_scale); 
         }
       }
-    
+      //
+       // Correct baseline after deconvolution
+      double decPedestal = 0;
+      if (fApplyPostBLCorr) {
+        for (size_t i=0; i<fPreTrigger-fPedestalBuffer; i++){
+          decPedestal = decPedestal + xvdec[i];
+        }
+        decPedestal = decPedestal/int(fPreTrigger-fPedestalBuffer);
+        //if (fFilterConfig.fType == EFilterType::kWiener) {
+          //decPedestal *= 0.5; 
+        //}
+      }
+
+      printf("pe_max = %g - dec_pedestal = %g - scale = %g * 0.001\n", 
+          SPE_Max, decPedestal, scale / 0.001); 
+      for (int i=0; i<fSamples; i++){ 
+        out_recob_float[i] = (xvdec[i]-decPedestal)*scale;
+      }
+   
 
       if        (strcmp(fOutputProduct.c_str(), "H" ) == 0) {
         CopyToOutput(xH, out_recob_float); 
@@ -606,9 +621,9 @@ namespace opdet {
       } else if (strcmp(fOutputProduct.c_str(), "N" ) == 0) {
         CopyToOutput(xN, out_recob_float); 
       } else if (strcmp(fOutputProduct.c_str(), "G0") == 0) {
-        CopyToOutput(xG0, out_recob_float); 
+        CopyToOutput(fxG0, out_recob_float); 
       } else if (strcmp(fOutputProduct.c_str(), "G1") == 0) {
-        CopyToOutput(xG1, out_recob_float); 
+        CopyToOutput(fxG1, out_recob_float); 
       } else if (strcmp(fOutputProduct.c_str(), "V" ) == 0) {
         CopyToOutput(xV, out_recob_float); 
       } else if (strcmp(fOutputProduct.c_str(), "v" ) == 0) {
@@ -616,9 +631,9 @@ namespace opdet {
         fft_c2r->Transform(); 
         Double_t* vv = fft_c2r->GetPointsReal(); 
         for (int i=0; i<fSamples; i++) out_recob_float.at(i) = scale* vv[i]; 
-      } else if (strcmp(fOutputProduct.c_str(), "SNR")==0) {
+      } else if (strcmp(fOutputProduct.c_str(), "SNR")== 0) {
         CopyToOutput(xSNR, out_recob_float); 
-      } else if (strcmp(fOutputProduct.c_str(), "G")==0) {
+      } else if (strcmp(fOutputProduct.c_str(), "G" ) == 0) {
         CopyToOutput(xG, out_recob_float);
       }
 
@@ -681,13 +696,6 @@ namespace opdet {
       xF.fCmplx.at(i) = F*TComplex::Exp(phase); 
       xF.MakeReAndIm(i); 
     }
-
-
-
-    //std::ofstream dump_filter; 
-    //dump_filter.open("prefilter_dump.txt"); 
-    //for (int i=0; i<0.5*fSamples + 1; i++) dump_filter << xF.fCmplx.at(i).Rho2() <<"\n";
-    //dump_filter.close(); 
 
     return; 
   }
@@ -846,7 +854,7 @@ namespace opdet {
    *
    * @return filter normalization
    */
-  Double_t Deconvolution::ComputeNormalization(CmplxWaveform_t& xGH, const float thrs) {
+  Double_t Deconvolution::ComputeAutoNormalization(CmplxWaveform_t& xGH, const float thrs) {
 
 
     // Apply a linear phase shift to make the "pulse" in the middle of the
@@ -876,12 +884,12 @@ namespace opdet {
 
     if (norm > 1.0) norm = 1.0; 
     else if (norm <= 0.){
-      printf("Deconvolution::ComputeNormalization() WARNING: "); 
+      printf("Deconvolution::ComputeAutoNormalization() WARNING: "); 
       printf(" bad normalization (%g), force to 1.0\n", norm);  
       norm = 1.0; 
     }
-    printf("imax = %i, ileft = %i, iright = %i -> integral = %g\n", 
-        imax, ileft, iright, norm*(fSamples)); 
+    //printf("imax = %i, ileft = %i, iright = %i -> integral = %g\n", 
+        //imax, ileft, iright, norm*(fSamples)); 
 
 
     return 1.0 / norm; 

@@ -18,11 +18,11 @@ standard_deconvolution:{
   AutoScale:         true      # Scaling based on SPE amp. from template 
   ApplyPrefilter:    false     # Filter the waveforms before deconvolution 
   ApplyPostfilter:   true      # Filter the waveforms after deconvolution
-  ApplyPostBLCorrection: false # Correct baseline after the deconvolution process
+  ApplyPostBLCorrection: true # Correct baseline after the deconvolution process
 
   WfmPostfilter: {
     Name: "Gauss"
-    Cutoff: 2.2              # In MHz
+    Cutoff: 2.8              # In MHz
   }
 
   WfmPrefilter: {

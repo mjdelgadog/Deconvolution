@@ -12,7 +12,7 @@ process_name: DecReco
 services:
 {
   # Load the service that manages root files for histograms.
-  TFileService: { fileName: "deconv_reco_hist_prefilter.root" }
+  TFileService: { fileName: "deconv_reco_hist_pf_4rms.root" }
   RandomNumberGenerator: {} #ART native random number generator
   message:      @local::standard_info
                 @table::dunefd_simulation_services
@@ -49,22 +49,22 @@ physics:
       opdecG:      @local::deconvolution_G
       opdecv:      @local::deconvolution_v
       opdecV:      @local::deconvolution_V
-      #ophit:     @local::dunefd_ophit
-      #opflash:   @local::dunefd_opflash
+      #ophit:      @local::dunefd_ophit
+      #opflash:    @local::dunefd_opflash
       rns:       { module_type: "RandomNumberSaver" }
    }
 
    analyzers:
    {
-      opdecoana:  @local::standard_deco_analysis
-      opdecoanaH:  @local::standard_deco_analysis
-      opdecoanaS:  @local::standard_deco_analysis
-      opdecoanaN:  @local::standard_deco_analysis
-      opdecoanaSNR:  @local::standard_deco_analysis
+      opdecoana:    @local::standard_deco_analysis
+      opdecoanaH:   @local::standard_deco_analysis
+      opdecoanaS:   @local::standard_deco_analysis
+      opdecoanaN:   @local::standard_deco_analysis
+      opdecoanaSNR: @local::standard_deco_analysis
       opdecoanaG0:  @local::standard_deco_analysis
-      opdecoanaG:  @local::standard_deco_analysis
-      opdecoanav:  @local::standard_deco_analysis 
-      opdecoanaV:  @local::standard_deco_analysis 
+      opdecoanaG:   @local::standard_deco_analysis
+      opdecoanav:   @local::standard_deco_analysis 
+      opdecoanaV:   @local::standard_deco_analysis 
       #opflashana:  @local::dunefd_opflashana
    }
    
@@ -95,31 +95,51 @@ outputs:
    out1:
    {
       module_type: RootOutput
-      fileName:    "deconv_reco_gen_prefilter.root"
+      fileName:    "deconv_reco_gen_pf_4rms.root"
       #default file name, can override from command line with -o or --output
    }
 }
 
-physics.producers.opdec.InputModule: "opdigi"
-physics.producers.opdecH.InputModule: "opdigi"
-physics.analyzers.opdecoanaH.InputModule: "opdecH"
-physics.analyzers.opdecoanaS.InputModule: "opdecS"
-physics.analyzers.opdecoanaN.InputModule: "opdecN"
-physics.analyzers.opdecoanaSNR.InputModule: "opdecsnr"
-physics.analyzers.opdecoanaG0.InputModule: "opdecG0"
-physics.analyzers.opdecoanaG.InputModule: "opdecG"
-physics.analyzers.opdecoanav.InputModule: "opdecv"
-physics.analyzers.opdecoanaV.InputModule: "opdecV"
+physics.producers.opdec         .InputModule: "opdigi"
+physics.producers.opdecH        .InputModule: "opdigi"
+physics.analyzers.opdecoanaH    .InputModule: "opdecH"
+physics.analyzers.opdecoanaS    .InputModule: "opdecS"
+physics.analyzers.opdecoanaN    .InputModule: "opdecN"
+physics.analyzers.opdecoanaSNR  .InputModule: "opdecsnr"
+physics.analyzers.opdecoanaG0   .InputModule: "opdecG0"
+physics.analyzers.opdecoanaG    .InputModule: "opdecG"
+physics.analyzers.opdecoanav    .InputModule: "opdecv"
+physics.analyzers.opdecoanaV    .InputModule: "opdecV"
 
-physics.producers.opdec   .ApplyPrefilter: true
-physics.producers.opdecH  .ApplyPrefilter: true
-physics.producers.opdecS  .ApplyPrefilter: true
-physics.producers.opdecN  .ApplyPrefilter: true
-physics.producers.opdecsnr.ApplyPrefilter: true
-physics.producers.opdecG0 .ApplyPrefilter: true
-physics.producers.opdecG  .ApplyPrefilter: true
-physics.producers.opdecv  .ApplyPrefilter: true
-physics.producers.opdecV  .ApplyPrefilter: true
+physics.producers.opdec   .ApplyPrefilter: false
+physics.producers.opdecH  .ApplyPrefilter: false
+physics.producers.opdecS  .ApplyPrefilter: false
+physics.producers.opdecN  .ApplyPrefilter: false
+physics.producers.opdecsnr.ApplyPrefilter: false
+physics.producers.opdecG0 .ApplyPrefilter: false
+physics.producers.opdecG  .ApplyPrefilter: false
+physics.producers.opdecv  .ApplyPrefilter: false
+physics.producers.opdecV  .ApplyPrefilter: false
+
+physics.producers.opdec   .ApplyPostfilter: false
+physics.producers.opdecH  .ApplyPostfilter: false
+physics.producers.opdecS  .ApplyPostfilter: false
+physics.producers.opdecN  .ApplyPostfilter: false
+physics.producers.opdecsnr.ApplyPostfilter: false
+physics.producers.opdecG0 .ApplyPostfilter: false
+physics.producers.opdecG  .ApplyPostfilter: false
+physics.producers.opdecv  .ApplyPostfilter: false
+physics.producers.opdecV  .ApplyPostfilter: false
+
+physics.producers.opdec   .AutoScale: true
+physics.producers.opdecH  .AutoScale: true
+physics.producers.opdecS  .AutoScale: true
+physics.producers.opdecN  .AutoScale: true
+physics.producers.opdecsnr.AutoScale: true
+physics.producers.opdecG0 .AutoScale: true
+physics.producers.opdecG  .AutoScale: true
+physics.producers.opdecv  .AutoScale: true
+physics.producers.opdecV  .AutoScale: true
 
 physics.producers.opdec   .LineNoiseRMS: 4
 physics.producers.opdecH  .LineNoiseRMS: 4

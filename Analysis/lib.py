@@ -1,15 +1,50 @@
 import uproot
 import numpy as np
 
-def load_larsoft_root(wvf_type,path,root_folder,template,debug=False):
+def combine_ophit_with_data(data,ophit):
+    output = dict()
+    output["PE"] = []
+    output["TIMES"] = []
+    output["AMP"] = []
+    for wvf in range(len(data["RECO"]["CH"])):
+        ch = data["RECO"]["CH"][wvf]
+        output["AMP"].append(ophit[ch]["Amplitude"][np.where((ophit[ch]["PeakTime"] < np.max(data["RECO"]["WVF_X"][wvf])) & (ophit[ch]["PeakTime"] > np.min(data["RECO"]["WVF_X"][wvf])))])
+        output["TIMES"].append(ophit[ch]["PeakTime"][np.where((ophit[ch]["PeakTime"] < np.max(data["RECO"]["WVF_X"][wvf])) & (ophit[ch]["PeakTime"] > np.min(data["RECO"]["WVF_X"][wvf])))])
+        output["PE"].append(np.sum(ophit[ch]["PE"][np.where((ophit[ch]["PeakTime"] < np.max(data["RECO"]["WVF_X"][wvf])) & (ophit[ch]["PeakTime"] > np.min(data["RECO"]["WVF_X"][wvf])))]))
+    return output
+
+def ophit_data(path,label):
+    ophit = dict()
+    ophit["LABEL"] = label
+    raw = uproot.open(path)
+    print(raw["ophitana/PerOpHitTree;1"].keys())
+    for branch in raw["ophitana/PerOpHitTree;1"].keys():
+        ophit[branch] = raw["ophitana/PerOpHitTree;1"][branch].array()
+    return ophit
+
+def order_ophit_data(ophit,ch_array):
+    new_ophit = dict()
+    new_ophit["LABEL"] = ophit["LABEL"]
+    for ch in ch_array:
+        new_ophit[ch] = dict()
+        for key in ophit.keys():
+            if key != "LABEL":
+                new_ophit[ch][key] = ophit[key][np.where(ophit["OpChannel"] == ch)]
+    return new_ophit
+
+def load_larsoft_root(wvf_type,path,root_folder,template,label="",debug=False):
     output = dict()
     if wvf_type == "RAW":
         output["PRETRIGGER"] = 98
         output["PEDESTAL"] = 1500
+        if label == "": output["LABEL"] = "RAW"
+        else: output["LABEL"] = label
     
     elif wvf_type == "DEC":
         output["PRETRIGGER"] = 98
         output["PEDESTAL"] = 0
+        if label == "": output["LABEL"] = "DEC"
+        else: output["LABEL"] = label
     
     else:
         output["PRETRIGGER"] = 0
@@ -22,16 +57,17 @@ def load_larsoft_root(wvf_type,path,root_folder,template,debug=False):
     raw = uproot.open(path)
 
     try:
-        raw_ch = raw["opdigi"]["PhotonData"]["photon_opCh"].array().to_numpy()[0]
-        raw_npe = raw["opdigi"]["PhotonData"]["photon_pulse"].array().to_numpy()[0]
+        raw_ch = raw[root_folder[0]]["PhotonData"]["photon_opCh"].array().to_numpy()[0]
+        raw_npe = raw[root_folder[0]]["PhotonData"]["photon_pulse"].array().to_numpy()[0]
         output["TRUTH_CH"]  = raw_ch   
         output["TRUTH_PE"]  = raw_npe
+        output["TRUE"]["PETIMES"]  = []
         output["TRUE"]["PE"]  = []
         output["TRUE"]["T0"]  = []
     except: 
-        if debug: print("FILE DID NOT CONTAIN 'digispe' FOLDER")
+        if debug: print("FILE DID NOT CONTAIN %s FOLDER"%root_folder[0])
 
-    raw_wvf_list = raw[root_folder].keys()
+    raw_wvf_list = raw[root_folder[1]].keys()
     raw_wvfs        = []
     raw_wvfs_x      = []
     raw_event       = []
@@ -40,22 +76,22 @@ def load_larsoft_root(wvf_type,path,root_folder,template,debug=False):
     raw_wvf_pe      = []
 
     for this_wvf in raw_wvf_list:
-        if this_wvf == "TriggerData;1":
+        if this_wvf == "TriggerData;1" or this_wvf == "Daphne;1":
             continue
         else:
             wvf_info = this_wvf.split("_")
             wvf_info[5] = wvf_info[5].split(";")[0]
-            raw_wvfs.append(raw[root_folder][this_wvf].to_numpy()[0])
-            raw_wvfs_x.append(raw[root_folder][this_wvf].to_numpy()[1][:-1])
+            raw_wvfs.append(raw[root_folder[1]][this_wvf].to_numpy()[0])
+            raw_wvfs_x.append(raw[root_folder[1]][this_wvf].to_numpy()[1][:-1])
             raw_event.append(int(wvf_info[1]))
             raw_wvf_ch.append(int(wvf_info[3]))
             raw_wvf_ch_num.append(int(wvf_info[5]))
    
-    output["RECO"]["EV"]   = np.asarray(raw_event)    
-    output["RECO"]["CH"]   = np.asarray(raw_wvf_ch)                 
-    output["RECO"]["#WVF"] = np.asarray(raw_wvf_ch_num)                 
-    output["RECO"]["WVF"]    = raw_wvfs 
-    output["RECO"]["WVF_X"]  = raw_wvfs_x 
+    output["RECO"]["EV"]    = np.asarray(raw_event)    
+    output["RECO"]["CH"]    = np.asarray(raw_wvf_ch)                 
+    output["RECO"]["#WVF"]  = np.asarray(raw_wvf_ch_num)                 
+    output["RECO"]["WVF"]   = raw_wvfs
+    output["RECO"]["WVF_X"] = raw_wvfs_x 
 
     try:
         npy_wvfs   = np.asarray(raw_wvfs)
@@ -76,13 +112,15 @@ def load_larsoft_root(wvf_type,path,root_folder,template,debug=False):
             output["TRUE"]["PE"].append(len(photons_per_wvf[i]))
             output["RECO"]["PE"].append(np.sum(np.asarray(raw_wvfs[i]-output["PEDESTAL"])[raw_wvfs[i]-output["PEDESTAL"] > 0])/np.sum(template[template > 0]))
             # print("Sum of raw: %.2f vs su of template %.2f"%(np.sum(np.asarray(raw_wvfs[i]-output["PEDESTAL"])[raw_wvfs[i]-output["PEDESTAL"] > 0]),np.sum(template[template > 0])))
-            output["RECO"]["PETIMES"].append(photons_per_wvf[i]-photons_per_wvf[i][0])
+            
             try:
+                output["TRUE"]["PETIMES"].append(photons_per_wvf[i]-photons_per_wvf[i][0])
                 output["TRUE"]["T0"].append(photons_per_wvf[i][0])
                 output["RECO"]["T0"].append(raw_wvfs_x[i][np.argmax(raw_wvfs[i])])
 
             except:
-                output["TRUE"]["T0"].append([-1000])
+                output["TRUE"]["PETIMES"].append([])
+                output["TRUE"]["T0"].append([])
                 output["RECO"]["T0"].append(raw_wvfs_x[i][np.argmax(raw_wvfs[i])])
 
             output["RECO"]["AMP"].append(np.max(raw_wvfs[i])-output["PEDESTAL"])      

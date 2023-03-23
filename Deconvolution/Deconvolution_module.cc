@@ -429,8 +429,8 @@ namespace opdet {
     auto out_wave = std::make_unique< std::vector< raw::OpDetWaveform > >();
     auto out_recob = std::make_unique< std::vector< recob::OpWaveform > >();
 
-    std::vector<short unsigned int > out_digiwave(NOpDetWaveform); //vector in which the waveform will be saved
-    std::vector<float> out_recob_float(NOpDetWaveform);               //vector in which the decowaveform will be saved, using float
+    std::vector<short unsigned int > out_digiwave(fSamples); //vector in which the waveform will be saved
+    std::vector<float> out_recob_float(fSamples);               //vector in which the decowaveform will be saved, using float
     std::vector<double> xv(fSamples, 0.); 
 
     //******************************

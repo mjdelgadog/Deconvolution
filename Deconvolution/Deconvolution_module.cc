@@ -457,7 +457,8 @@ namespace opdet {
       CmplxWaveform_t xY(fSamples); 
       CmplxWaveform_t xGH(fSamples); 
       std::vector<float> xSNR(fSamples, 0.); 
-
+      
+      int OriginalWaveformSize = wf.Waveform().size();
       //----------------------------------------------------------- Resize wvfs
       if (static_cast<int>(wf.Waveform().size()) <= fSamples) { 
         out_recob_float.resize(fSamples,0); 
@@ -613,7 +614,13 @@ namespace opdet {
         out_recob_float[i] = (xvdec[i]-decPedestal)*scale;
       }
    
+      if (int(out_recob_float.size()) <= OriginalWaveformSize) { 
+        out_recob_float.resize(OriginalWaveformSize,0); 
+        printf("\nWARNING: waveform size is %lu, which is smaller than original size (%i)\n", out_recob_float.size(), OriginalWaveformSize);
+      }
 
+      else {out_recob_float.resize(OriginalWaveformSize);}
+     
       if        (strcmp(fOutputProduct.c_str(), "H" ) == 0) {
         CopyToOutput(xH, out_recob_float); 
       } else if (strcmp(fOutputProduct.c_str(), "S" ) == 0) {

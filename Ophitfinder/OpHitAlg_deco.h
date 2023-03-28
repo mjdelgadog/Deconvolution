@@ -31,7 +31,7 @@ namespace pmtana {
 }
 
 namespace opdet {
-
+  
   void RunHitFinder(std::vector<raw::OpDetWaveform> const&,
                     std::vector<recob::OpHit>&,
                     pmtana::PulseRecoManager const&,
@@ -42,7 +42,8 @@ namespace opdet {
                     calib::IPhotonCalibrator const&,
                     bool use_start_time = false);
 
-  void RunHitFinder_deco(std::vector<recob::OpWaveform> const&,                 
+  void RunHitFinder_deco(std::vector<recob::OpWaveform> const&,
+                    std::vector<raw::OpDetWaveform> const&,                 
                     std::vector<recob::OpHit>&,
                     pmtana::PulseRecoManager const&,
                     pmtana::PMTPulseRecoBase const&,
@@ -52,7 +53,8 @@ namespace opdet {
                     calib::IPhotonCalibrator const&,
                     bool use_start_time = false);
 
-  void ConstructHit(float,
+  void ConstructHit(std::vector<raw::OpDetWaveform> const&,
+                    float,                                   
                     int,
                     double,
                     pmtana::pulse_param const&,

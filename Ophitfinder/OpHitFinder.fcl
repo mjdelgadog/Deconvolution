@@ -1,0 +1,34 @@
+BEGIN_PROLOG
+
+standard_ophit_finder_template:
+{
+    module_type:     "OpHitFinderSPE"
+    GenModule:       "generator"
+    InputModule:     "opdec"            
+    InputModuledigi: "opdigi"
+    InputLabels:     [ "" ]
+    
+    InputData:       "Template"
+    ChannelMasks:    []      # Will ignore channels in this list
+    HitThreshold:    1500    # Amplitude threshold for hits      
+    UseCalibrator:   false   # disable
+                             # are used     
+    AreaToPE:        true    # Use area to calculate number of PEs
+    ScalingFactor:   100.0   # If AreaToPE is true, this number is 
+    SPEArea:         100.0   # For deco waveforms, should be equal to Scaling 
+                             # used as single PE area (in (ADC*ns)/(sampling rate)16ns = ADC counts)
+    SPEShift:        0.0     # Baseline offset in ADC->SPE conversion
+    reco_man:        @local::standard_preco_manager
+    HitAlgoPset:     @local::standard_algo_slidingwindow
+    PedAlgoPset:     @local::standard_algo_pedestal_edges      #edges
+    #ophit_finder_spe.HitAlgoPset.ADCThreshold: 6
+}
+
+standard_ophit_finder_ideal: @local::standard_ophit_finder_template
+standard_ophit_finder_ideal.InputData: "Ideal"
+standard_ophit_finder_ideal.HitThreshold: 1.5
+standard_ophit_finder_ideal.ScalingFactor: 1.0
+standard_ophit_finder_ideal.SPEArea: 410
+standard_ophit_finder_ideal.SPESize: 0.451
+
+END_PROLOG

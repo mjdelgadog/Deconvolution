@@ -3,9 +3,9 @@ BEGIN_PROLOG
 standard_deco_analysis:
    {
      module_type:              "DecoAnalysis"
-     InputModule:              "opdec" 
+     InputModuleDeco:          "opdec" 
+     InputModuleDigi:          "opdigi" 
      InstanceName:             "" 
-     ZeroSupThresh:            0.5
    }
 
 END_PROLOG

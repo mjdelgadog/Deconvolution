@@ -49,48 +49,44 @@
 
 namespace {
   template <typename T>
-  pmtana::PMTPulseRecoBase* thresholdAlgorithm(fhicl::ParameterSet const& hit_alg_pset,
-                                               std::optional<fhicl::ParameterSet> const& rise_alg_pset)
-  {
-    if (rise_alg_pset)
-      return new T(hit_alg_pset, art::make_tool<pmtana::RiseTimeCalculatorBase>(*rise_alg_pset) );
-    else
-      return new T(hit_alg_pset, nullptr);
+  pmtana::PMTPulseRecoBase* thresholdAlgorithm(fhicl::ParameterSet const& hit_alg_pset,std::optional<fhicl::ParameterSet> const& rise_alg_pset){
+    if (rise_alg_pset){return new T(hit_alg_pset, art::make_tool<pmtana::RiseTimeCalculatorBase>(*rise_alg_pset) );}
+    else{return new T(hit_alg_pset, nullptr);}
   }
 }
 
 namespace opdet {
-
   class OpHitFinderSPE : public art::EDProducer {
-  public:
-    // Standard constructor and destructor for an ART module.
-    explicit OpHitFinderSPE(const fhicl::ParameterSet&);
-    virtual ~OpHitFinderSPE();
+    public:
+      // Standard constructor and destructor for an ART module.
+      explicit OpHitFinderSPE(const fhicl::ParameterSet&);
+      virtual ~OpHitFinderSPE();
 
-    // The producer routine, called once per event.
-    void produce(art::Event&);
+      // The producer routine, called once per event.
+      void produce(art::Event&);
 
-  private:
-    std::map<int, int> GetChannelMap();
-    std::vector<double> GetSPEScales();
-    std::vector<double> GetSPEShifts();
+    private:
+      std::map<int, int> GetChannelMap();
+      std::vector<double> GetSPEScales();
+      std::vector<double> GetSPEShifts();
 
-    // The parameters we'll read from the .fcl file.
-    std::string fInputModule; // Input tag for OpDetWaveform collection
-   std::string fInputModuledigi; 
-    std::string fGenModule;
-    std::vector<std::string> fInputLabels;
-    std::set<unsigned int> fChannelMasks;
+      // The parameters we'll read from the .fcl file.
+      std::string fInputModule; // Input tag for OpDetWaveform collection
+      std::string fInputModuledigi; 
+      std::string fGenModule;
+      std::vector<std::string> fInputLabels;
+      std::set<unsigned int> fChannelMasks;
 
-    pmtana::PulseRecoManager fPulseRecoMgr;
-    pmtana::PMTPulseRecoBase* fThreshAlg;
-    pmtana::PMTPedestalBase* fPedAlg;
+      pmtana::PulseRecoManager fPulseRecoMgr;
+      pmtana::PMTPulseRecoBase* fThreshAlg;
+      pmtana::PMTPedestalBase* fPedAlg;
 
-    Float_t fHitThreshold;
-    unsigned int fMaxOpChannel;
-    bool fUseStartTime;
+      Float_t fHitThreshold;
+      Float_t fScale;
+      unsigned int fMaxOpChannel;
+      bool fUseStartTime;
 
-    calib::IPhotonCalibrator const* fCalib = nullptr;
+      calib::IPhotonCalibrator const* fCalib = nullptr;
   };
 
 }
@@ -100,11 +96,9 @@ namespace opdet {
 }
 
 namespace opdet {
-
   //----------------------------------------------------------------------------
   // Constructor
-  OpHitFinderSPE::OpHitFinderSPE(const fhicl::ParameterSet& pset) : EDProducer{pset}, fPulseRecoMgr()
-  {
+  OpHitFinderSPE::OpHitFinderSPE(const fhicl::ParameterSet& pset) : EDProducer{pset}, fPulseRecoMgr(){
     // Indicate that the Input Module comes from .fcl
     fInputModule = pset.get<std::string>("InputModule");
     fInputModuledigi = pset.get<std::string>("InputModuledigi");
@@ -112,23 +106,19 @@ namespace opdet {
     fInputLabels = pset.get<std::vector<std::string>>("InputLabels");
     fUseStartTime = pset.get<bool>("UseStartTime", false);
 
-    for (auto const& ch :
-         pset.get<std::vector<unsigned int>>("ChannelMasks", std::vector<unsigned int>()))
-      fChannelMasks.insert(ch);
+    for (auto const& ch : pset.get<std::vector<unsigned int>>("ChannelMasks", std::vector<unsigned int>()))fChannelMasks.insert(ch);
 
     fHitThreshold = pset.get<float>("HitThreshold");
+    fScale        = pset.get<float>("ScalingFactor");
     bool useCalibrator = pset.get<bool>("UseCalibrator", false);
 
     auto const& geometry(*lar::providerFrom<geo::Geometry>());
     fMaxOpChannel = geometry.MaxOpChannel();
-
-    if (useCalibrator) {
-      // If useCalibrator, get it from ART
-      fCalib = lar::providerFrom<calib::IPhotonCalibratorService>();
-    }
+    
+    // If useCalibrator, get it from ART
+    if (useCalibrator) {fCalib = lar::providerFrom<calib::IPhotonCalibratorService>();}
+    // If not useCalibrator, make an internal one based on fhicl settings to hit finder.
     else {
-      // If not useCalibrator, make an internal one based
-      // on fhicl settings to hit finder.
       bool areaToPE = pset.get<bool>("AreaToPE");
       float SPEArea = pset.get<float>("SPEArea");
       float SPEShift = pset.get<float>("SPEShift", 0.);
@@ -174,34 +164,26 @@ namespace opdet {
     else
       throw art::Exception(art::errors::UnimplementedFeature)
         << "Cannot find implementation for " << pedAlgName << " algorithm.\n";
-      
-       
+
     produces<std::vector<recob::OpHit>>();
 
     fPulseRecoMgr.AddRecoAlgo(fThreshAlg);
     fPulseRecoMgr.SetDefaultPedAlgo(fPedAlg);
-    
- 
-    
   }
 
   //----------------------------------------------------------------------------
   // Destructor
   OpHitFinderSPE::~OpHitFinderSPE()
   {
-
     delete fThreshAlg;
     delete fPedAlg;
   }
 
   //----------------------------------------------------------------------------
   void
-  OpHitFinderSPE::produce(art::Event& evt)
-  {
-
+  OpHitFinderSPE::produce(art::Event& evt){
     // These is the storage pointer we will put in the event
     std::unique_ptr<std::vector<recob::OpHit>> HitPtr(new std::vector<recob::OpHit>);
-    std:: cout << "hit: " << HitPtr->size() <<std::endl;
     std::vector<const sim::BeamGateInfo*> beamGateArray;
     try {
       evt.getView(fGenModule, beamGateArray);
@@ -212,35 +194,21 @@ namespace opdet {
 
     auto const& geometry(*lar::providerFrom<geo::Geometry>());
     auto const clock_data =
-      art::ServiceHandle<detinfo::DetectorClocksService const>()->DataFor(evt);
+    art::ServiceHandle<detinfo::DetectorClocksService const>()->DataFor(evt);
     auto const& calibrator(*fCalib);
-    //
-    // Get the pulses from the event
-    //
 
     // Load pulses into WaveformVector
       if (fChannelMasks.empty() && fInputLabels.size() < 2) {
         art::Handle<std::vector<recob::OpWaveform>> decoHandle;
-      if (fInputLabels.empty())
-          evt.getByLabel(fInputModule, decoHandle);
-      else
-        evt.getByLabel(fInputModule, fInputLabels.front(), decoHandle);
-      assert(decoHandle.isValid());
-      art::Handle<std::vector<raw::OpDetWaveform>> rawHandle;
-      evt.getByLabel(fInputModuledigi, rawHandle);
-       RunHitFinder_deco(*decoHandle,
-                   *rawHandle,
-                   *HitPtr,
-                   fPulseRecoMgr,
-                   *fThreshAlg,
-                   geometry,
-                   fHitThreshold,
-                   clock_data,
-                   calibrator,
-                   fUseStartTime);
+        if (fInputLabels.empty()) evt.getByLabel(fInputModule, decoHandle);
+        else evt.getByLabel(fInputModule, fInputLabels.front(), decoHandle);
+        assert(decoHandle.isValid());
+        art::Handle<std::vector<raw::OpDetWaveform>> rawHandle;
+        evt.getByLabel(fInputModuledigi, rawHandle);
+        RunHitFinder_deco(*decoHandle,*rawHandle,*HitPtr,fPulseRecoMgr,*fThreshAlg,geometry,fHitThreshold,fScale,clock_data,calibrator,fUseStartTime);
     }
+    
     else {
-
       // Reserve a large enough array
       int totalsize = 0;
       for (auto label : fInputLabels) {
@@ -252,40 +220,23 @@ namespace opdet {
 
       std::vector<recob::OpWaveform> opWaveformVector;
       opWaveformVector.reserve(totalsize);
-            
       std::vector<raw::OpDetWaveform> opDetWaveformVector;
       
       for (auto label : fInputLabels) {
         art::Handle<std::vector<recob::OpWaveform>> decoHandle;
-        //art::Handle<std::vector<raw::OpDetWaveform>> wienerHandle;
         evt.getByLabel(fInputModule, label, decoHandle);
-                
         if (!decoHandle.isValid()) continue; // Skip non-existent collections
         
-        
         for (auto const& wf : *decoHandle) {
-          
-          //if (fChannelMasks.find(wf.ChannelNumber()) != fChannelMasks.end()) continue;
           if (fChannelMasks.find(wf.Channel()) != fChannelMasks.end()) continue;
           opWaveformVector.push_back(wf);
         }
       }
         
-      RunHitFinder_deco(opWaveformVector,
-                   opDetWaveformVector,
-                   *HitPtr,
-                   fPulseRecoMgr,
-                   *fThreshAlg,
-                   geometry,
-                   fHitThreshold,
-                   clock_data,
-                   calibrator,
-                   fUseStartTime);
+      RunHitFinder_deco(opWaveformVector,opDetWaveformVector,*HitPtr,fPulseRecoMgr,*fThreshAlg,geometry,fHitThreshold,fScale,clock_data,calibrator,fUseStartTime);
     }
-    std:: cout << "hit: " << HitPtr->size() << std::endl;
-    
+
     // Store results into the event
     evt.put(std::move(HitPtr));
-  }
-     
+  }   
 } // namespace opdet

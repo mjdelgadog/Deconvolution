@@ -384,11 +384,8 @@ namespace opdet {
     fTimeBegin = 0; 
     fTimeEnd   = detProp.ReadOutWindowSize() / clockData.TPCClock().Frequency();  
 
-    fExtraSamples = 2*fSamples;
-
     fft_r2c = TVirtualFFT::FFT(1, &fSamples, "M R2C K");
     fft_c2r = TVirtualFFT::FFT(1, &fSamples, "M C2R K");
-
 
     SourceSPEDigiDataFile(); 
 

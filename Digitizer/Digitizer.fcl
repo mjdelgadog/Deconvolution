@@ -1,8 +1,26 @@
-#include "SSPAlgorithm.fcl"
-
 BEGIN_PROLOG
 
-standard_digitizer: 
+##################################################
+# SSP module algorithms
+##################################################
+
+algo_sspleadingedge:
+{
+    Name:             "SSP_LED"
+    ADCThreshold:     10
+    #MinWidth:          10
+    #SecondThreshold:    1
+    Pedestal:         1500
+    DWindow:          10 
+    ReadoutWd:        1001 # Actual wvf max length in [ticks] +1
+    PreTrg:           100  # I think this is not used?
+}
+
+##################################################
+# Digitizer module algorithms
+##################################################
+
+standard_template_digitizer: 
 {
   module_type:  "OpDetDigitizerDUNE"
   InputModules: ["largeant"] # Module that created simphotons
@@ -29,7 +47,7 @@ standard_digitizer:
   PeakTime:           0                             # 1.950
   SSP_LED_DigiTree:   true                          # To create a SSP LED trigger Ttree
   SinglePEsignal:     true                          # false for ideal XArapuca response, true for testbench
-  SPEDataFile:        "fbk_deco.txt" # Path to SPE template
+  SPEDataFile:        "fbk_deco.txt"                # Path to SPE template
   TestbenchSinglePE:  true                          # Bool to select SPE template
   
   #Parameters for DAPHNE 
@@ -38,5 +56,8 @@ standard_digitizer:
   FrontTime:          0.097                         # 0.013(0.097 FBK)(0.146 )
   BackTime:           0.91                          # 0.51  (0.676hpk)
 }
+
+standard_ideal_digitizer: @local::standard_template_digitizer
+standard_ideal_digitizer.TestbenchSinglePE: false
 
 END_PROLOG

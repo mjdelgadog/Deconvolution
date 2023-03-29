@@ -363,38 +363,35 @@ namespace opdet {
     fFilterConfig{ WfmFilter_t( pars().Filter() ) }, 
     fxG0(fSamples), 
     fxG1(fSamples)
-  {  
+    {  
+      // Declare that we'll produce a vector of OpDetWaveforms  
+      WfDeco=0;  
 
-    WfDeco=0;  
+      // auto const *LarProp = lar::providerFrom<detinfo::LArPropertiesService>();
+      art::ServiceHandle< art::TFileService > tfs; 
 
-    // auto const *LarProp = lar::providerFrom<detinfo::LArPropertiesService>();
-    art::ServiceHandle< art::TFileService > tfs; 
+      // This module produces
+      // produces< std::vector< raw::OpDetWaveform > >();  
+      produces< std::vector< recob::OpWaveform> > ();   
 
-    // This module produces
-    produces< std::vector< raw::OpDetWaveform > >();  
-    produces< std::vector< recob::OpWaveform> > ();   
+      // Obtain parameters from TimeService
+      auto const clockData = art::ServiceHandle<detinfo::DetectorClocksService const>()->DataForJob();
+      fSampleFreq = clockData.OpticalClock().Frequency();
 
+      auto const detProp = art::ServiceHandle<detinfo::DetectorPropertiesService const>()->DataForJob(clockData);
 
-    // Obtain parameters from TimeService
-    auto const clockData = art::ServiceHandle<detinfo::DetectorClocksService const>()->DataForJob();
-    fSampleFreq = clockData.OpticalClock().Frequency();
+      fTimeBegin = 0; 
+      fTimeEnd   = detProp.ReadOutWindowSize() / clockData.TPCClock().Frequency();  
 
-    auto const detProp = art::ServiceHandle<detinfo::DetectorPropertiesService const>()->DataForJob(clockData);
+      fft_r2c = TVirtualFFT::FFT(1, &fSamples, "M R2C K");
+      fft_c2r = TVirtualFFT::FFT(1, &fSamples, "M C2R K");
 
-    fTimeBegin = 0; 
-    fTimeEnd   = detProp.ReadOutWindowSize() / clockData.TPCClock().Frequency();  
+      SourceSPEDigiDataFile(); 
 
-    fft_r2c = TVirtualFFT::FFT(1, &fSamples, "M R2C K");
-    fft_c2r = TVirtualFFT::FFT(1, &fSamples, "M C2R K");
-
-    SourceSPEDigiDataFile(); 
-
-    // build pre and/or post filter (if required)
-    if (fApplyPrefilter ) BuildExtraFilter(fxG0, fPrefilterConfig );
-    if (fApplyPostfilter) BuildExtraFilter(fxG1, fPostfilterConfig); 
-
-
-  }
+      // build pre and/or post filter (if required)
+      if (fApplyPrefilter ) BuildExtraFilter(fxG0, fPrefilterConfig );
+      if (fApplyPostfilter) BuildExtraFilter(fxG1, fPostfilterConfig); 
+    }
 
   //---------------------------------------------------------------------------
   // Destructor
@@ -423,10 +420,10 @@ namespace opdet {
     std::cout << NOpDetWaveform << std::endl;
 
     //pointer that will store produced Waveform
-    auto out_wave = std::make_unique< std::vector< raw::OpDetWaveform > >();
+    // auto out_wave = std::make_unique< std::vector< raw::OpDetWaveform > >();
     auto out_recob = std::make_unique< std::vector< recob::OpWaveform > >();
 
-    std::vector<short unsigned int > out_digiwave(fSamples); //vector in which the waveform will be saved
+    // std::vector<short unsigned int > out_digiwave(fSamples); //vector in which the waveform will be saved
     std::vector<float> out_recob_float(fSamples);            //vector in which the decowaveform will be saved, using float
     std::vector<double> xv(fSamples, 0.); 
 

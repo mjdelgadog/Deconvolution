@@ -3,11 +3,11 @@ Wiener &amp; Gauss Filter
 
 The full analysis workflow can be exeuted using these commands:
  - Digitizer:
-  - $ lar -c digitizer_ideal_run.fcl dune1x2x6_optical_tutorial_sim_gen_3GeV.root
-  - This should output: opdetraw_ideal_gen.root & opdetraw_ideal_hist.root
+   - $ lar -c digitizer_ideal_run.fcl dune1x2x6_optical_tutorial_sim_gen_3GeV.root
+   - This should output: opdetraw_ideal_gen.root & opdetraw_ideal_hist.root
  
-  - $ lar -c digitizer_template_run.fcl dune1x2x6_optical_tutorial_sim_gen_3GeV.root
-  - This should output: opdetraw_template_gen.root & opdetraw_template_hist.root
+   - $ lar -c digitizer_template_run.fcl dune1x2x6_optical_tutorial_sim_gen_3GeV.root
+   - This should output: opdetraw_template_gen.root & opdetraw_template_hist.root
  
  - Deconvolution:
   - $ lar -c deconvolution_gauss_run.fcl opdetraw_template_gen.root

@@ -49,6 +49,7 @@ namespace opdet {
                     pmtana::PMTPulseRecoBase const&,
                     geo::GeometryCore const&,
                     float,
+                    float,
                     detinfo::DetectorClocksData const&,
                     calib::IPhotonCalibrator const&,
                     bool use_start_time = false);

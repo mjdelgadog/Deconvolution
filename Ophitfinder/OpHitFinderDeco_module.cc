@@ -194,7 +194,7 @@ namespace opdet {
     auto const clock_data = art::ServiceHandle<detinfo::DetectorClocksService const>()->DataFor(evt);
     auto const& calibrator(*fCalib);
 
-    if (fInputDigiType == "recob"){
+    if (fInputDigiType == "Template"){
       // Load pulses into WaveformVector
       art::Handle<std::vector<recob::OpWaveform>> decoHandle;
       art::Handle<std::vector<raw::OpDetWaveform>> rawHandle;
@@ -208,7 +208,7 @@ namespace opdet {
       RunHitFinder_deco(*decoHandle,*rawHandle,*HitPtr,fPulseRecoMgr,*fThreshAlg,geometry,fHitThreshold,fScale,clock_data,calibrator,fUseStartTime);
     }
 
-    if (fInputDigiType == "raw"){
+    if (fInputDigiType == "Ideal"){
       // Load pulses into WaveformVector
       art::Handle<std::vector<raw::OpDetWaveform>> rawHandle;
       evt.getByLabel(fInputModuledigi,rawHandle);

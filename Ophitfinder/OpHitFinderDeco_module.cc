@@ -172,7 +172,7 @@ namespace opdet {
 
   //----------------------------------------------------------------------------
   // Destructor
-  OpHitFinderDeco::~OpHitFinderDeco()
+  :OpHitFinderDeco:~OpHitFinderDeco()
   {
     delete fThreshAlg;
     delete fPedAlg;
@@ -194,7 +194,7 @@ namespace opdet {
     auto const clock_data = art::ServiceHandle<detinfo::DetectorClocksService const>()->DataFor(evt);
     auto const& calibrator(*fCalib);
 
-    if (fInputDigiType == "Template"){
+    if (fInputDigiType == "recob"){
       // Load pulses into WaveformVector
       art::Handle<std::vector<recob::OpWaveform>> decoHandle;
       art::Handle<std::vector<raw::OpDetWaveform>> rawHandle;
@@ -208,46 +208,55 @@ namespace opdet {
       RunHitFinder_deco(*decoHandle,*rawHandle,*HitPtr,fPulseRecoMgr,*fThreshAlg,geometry,fHitThreshold,fScale,clock_data,calibrator,fUseStartTime);
     }
 
-    if (fInputDigiType == "Ideal"){
+    if (fInputDigiType == "raw"){
       // Load pulses into WaveformVector
       art::Handle<std::vector<raw::OpDetWaveform>> rawHandle;
       evt.getByLabel(fInputModuledigi,rawHandle);
       assert(rawHandle.isValid());
+       if (fChannelMasks.empty() && fInputLabels.size() < 2) {
+      art::Handle<std::vector<raw::OpDetWaveform>> rawHandle;
+      if (fInputLabels.empty())
+        evt.getByLabel(fInputModule, rawHandle);
+      else
+        evt.getByLabel(fInputModule, fInputLabels.front(), rawHandle);
+      assert(rawHandle.isValid());
       RunHitFinder(*rawHandle,*HitPtr,fPulseRecoMgr,*fThreshAlg,geometry,fHitThreshold,clock_data,calibrator,fUseStartTime);
+    }
+    else {
+
+      // Reserve a large enough array
+      int totalsize = 0;
+      for (auto label : fInputLabels) {
+        art::Handle<std::vector<raw::OpDetWaveform>> rawHandle;
+        evt.getByLabel(fInputModule, label, rawHandle);
+        if (!rawHandle.isValid()) continue; // Skip non-existent collections
+        totalsize += rawHandle->size();
+      }
+
+      std::vector<raw::OpDetWaveform> WaveformVector;
+      WaveformVector.reserve(totalsize);
+
+      for (auto label : fInputLabels) {
+        art::Handle<std::vector<raw::OpDetWaveform>> rawHandle;
+        evt.getByLabel(fInputModule, label, rawHandle);
+        if (!rawHandle.isValid()) continue; // Skip non-existent collections
+
+        //WaveformVector.insert(WaveformVector.end(),
+        //                      wfHandle->begin(), wfHandle->end());
+        for (auto const& wf : *rawHandle) {
+          if (fChannelMasks.find(wf.ChannelNumber()) != fChannelMasks.end()) continue;
+          WaveformVector.push_back(wf);
+        }
+      }
+
+      RunHitFinder(WaveformVector,*HitPtr,fPulseRecoMgr,*fThreshAlg,geometry,fHitThreshold,clock_data,calibrator,fUseStartTime);
+      }
     }
 
     else{std::cout<<"InputDigiType not recognized"<<std::endl;}
-    // }
     
-    // else {
-    //   // Reserve a large enough array
-    //   int totalsize = 0;
-    //   for (auto label : fInputLabels) {
-    //     art::Handle<std::vector<recob::OpWaveform>> decoHandle;
-    //     evt.getByLabel(fInputModule, label, decoHandle);
-    //     if (!decoHandle.isValid()) continue; // Skip non-existent collections
-    //     totalsize += decoHandle->size();
-    //   }
-
-    //   std::vector<recob::OpWaveform> opWaveformVector;
-    //   opWaveformVector.reserve(totalsize);
-    //   std::vector<raw::OpDetWaveform> opDetWaveformVector;
-      
-    //   for (auto label : fInputLabels) {
-    //     art::Handle<std::vector<recob::OpWaveform>> decoHandle;
-    //     evt.getByLabel(fInputModule, label, decoHandle);
-    //     if (!decoHandle.isValid()) continue; // Skip non-existent collections
-        
-    //     for (auto const& wf : *decoHandle) {
-    //       if (fChannelMasks.find(wf.Channel()) != fChannelMasks.end()) continue;
-    //       opWaveformVector.push_back(wf);
-    //     }
-    //   }
-        
-    //   RunHitFinder_deco(opWaveformVector,opDetWaveformVector,*HitPtr,fPulseRecoMgr,*fThreshAlg,geometry,fHitThreshold,fScale,clock_data,calibrator,fUseStartTime);
-    // }
-
     // Store results into the event
+    std:: cout << "hit: " << HitPtr->size() << std::endl;
     evt.put(std::move(HitPtr));
   }   
 } // namespace opdet

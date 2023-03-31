@@ -35,9 +35,9 @@ standard_template_digitizer:
   Pedestal:           1500                          # in ADC counts
 
   FullWaveformOutput: false                         # Output full waveform. Be careful with this option, setting it to "true" can result in large output files
-  DefaultSimWindow:   false                         # Use -1*drift window as the start time and                                                 
-  TimeBegin:          0                             # In us (not used if DefaultSimWindow is set to true)0.2
-  TimeEnd:            16                            # In us (not used if DefaultSimWindow is set to true)
+  DefaultSimWindow:   true                          # Use -1*drift window as the start time and                                                 
+  TimeBegin:          0                             # In us (not used if DefaultSimWindow is set to true)
+  TimeEnd:            1600                          # In us (not used if DefaultSimWindow is set to true)
   ReadoutWindow:      1000                          # In ticks
   
   PreTrigger:         100                           # [ticks] Does not do anything with padding = 0
@@ -50,11 +50,12 @@ standard_template_digitizer:
   SPEDataFile:        "fbk_deco.txt"                # Path to SPE template
   TestbenchSinglePE:  true                          # Bool to select SPE template
   
-  #Parameters for DAPHNE 
-  PulseLength:        16.0                          # hpk 7.2  (FBK 0.0095)
-  MaxAmplitude:       0.04092                       # 0.04092 (FBK 0.0095)   # * VoltageToADC = 6.2 ADC/PE
-  FrontTime:          0.097                         # 0.013(0.097 FBK)(0.146 )
-  BackTime:           0.91                          # 0.51  (0.676hpk)
+  #Parameters for Ideal SPE 
+  PulseLength:          5.2
+  PeakTime:             0.0260
+  MaxAmplitude:         0.0594      # * VoltageToADC = 9 ADC/PE
+  FrontTime:            0.013
+  BackTime:             0.386
 }
 
 standard_ideal_digitizer: @local::standard_template_digitizer

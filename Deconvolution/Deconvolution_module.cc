@@ -1,12 +1,12 @@
-// =========================================================
-// Deconvolutions_module.cc
-// This module produces deconvoluted signal output
+// ===========================================================================
+// Deconvolution_module.cc
+// This module produces deconvoluted signals output
 // Using the signal digitized with the template in digitizer module as input.
 // (creating OpWaveform)
 // Filter wiener/gauss -FFT
 // @authors     : Daniele Guffanti, Maritza Delgado, Sergio Manthey Corchado
 // @created     : Jan 26, 2022 
-//========================================================= 
+//============================================================================= 
  
 #ifndef Deconvolution_h
 #define Deconvolution_h
@@ -235,14 +235,10 @@ namespace opdet {
         //!
         //! Note that the second half of the waveform is set to zero
         inline void MakeCmplx() {
-          for (size_t i=0; i<fCmplx.size()*0.5+1; i++) {
+          for (size_t i=0; i<fCmplx.size(); i++) {
             MakeCmplx(i);
           }
-          for (size_t i=fCmplx.size()*0.5+1; i<fCmplx.size(); i++) {
-            fCmplx.at(i) = TComplex(0, 0); 
-            fRe.at(i) = 0.; 
-            fIm.at(i) = 0.;
-          }
+          return;
         }
 
         //! Set the real and imaginary part of the coefficient `i` 
@@ -258,11 +254,7 @@ namespace opdet {
           for (size_t i=0; i<fCmplx.size()*0.5+1; i++) {
             MakeReAndIm(i); 
           } 
-          for (size_t i=fCmplx.size()*0.5+1; i<fCmplx.size(); i++) {
-            fCmplx.at(i) = TComplex(0., 0.); 
-            fRe.at(i) = 0.;
-            fIm.at(i) = 0.; 
-          }
+          return;
         }
       };
 

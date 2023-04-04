@@ -65,7 +65,7 @@ namespace opdet {
      
     // Flags to enable or disable output of debugging 
     bool fMakePerOpHitTree;
-    bool fMakePerChannelTree;
+    
       
     TTree* fPerOpHitTree;
     TTree* fPerChannelTree;
@@ -75,9 +75,6 @@ namespace opdet {
     Int_t fEventID;
     Int_t fHitID;
     Int_t fOpChannelID;
-    //std::vector<int> fOpChannel;
-    //std::vector<float> fPeakTime;
-    //std::vector<float> fPE;
     Int_t fOpChannel;
     Double_t fPeakTimeAbs;
     Double_t fPeakTime;
@@ -120,13 +117,9 @@ namespace opdet {
     fTimeBegin = clockData.OpticalClock().Time();
     fTimeEnd = clockData.OpticalClock().FramePeriod();
     fSampleFreq = clockData.OpticalClock().Frequency();
-    //fTimeEnd   = detProp.ReadOutWindowSize() / clockData.TPCClock().Frequency();*/
-    // Assume the readout is symmetrical around 0
-    // fTimeBegin = -1.*fTimeEnd;
-    
+        
     fMakePerOpHitTree   = pset.get<bool>("MakePerOpHitTree");
-    fMakePerChannelTree = pset.get<bool>("MakePerChannelTree");
-
+   
     // If required, make TTree for output
 
     if (fMakePerOpHitTree) {
@@ -143,15 +136,7 @@ namespace opdet {
       fPerOpHitTree->Branch("PE", &fPE, "PE/F");
       fPerOpHitTree->Branch("FastToTotal", &fFastToTotal, "FastToTotal/F");
     }
-    
-    if (fMakePerChannelTree) {
-      fPerChannelTree = tfs->make<TTree>("PerChannelTree", "PerChannelTree");
-      fPerChannelTree->Branch("OpChannel", &fOpChannel, "OpChannel/I");
-      fPerChannelTree->Branch("PeakTime", &fPeakTime, "PeakTime/D");
-      fPerChannelTree->Branch("PE", &fPE, "PE/F");
-     }
-    
-       
+        
   }
  
   //-----------------------------------------------------------------------
@@ -176,8 +161,7 @@ namespace opdet {
     fEventID = evt.id().event();
     
     art::ServiceHandle<geo::Geometry const> geom;
-   // int NOpChannels = geom->NOpChannels();
-    
+     
     
     // For every OpHit in the vector
     
@@ -196,17 +180,8 @@ namespace opdet {
           fPerOpHitTree->Fill();
         }
       }
-   
-           
-        if (fMakePerChannelTree) {
-         for (size_t i = 0; i != OpHitHandle->size(); ++i) {
-            fOpChannel = OpHitHandle->at(i).OpChannel();
-            fPE = OpHitHandle->at(i).PE();
-            fPeakTime = OpHitHandle->at(i).PeakTime();
-            fPerChannelTree->Fill();
-           }
-        }
+             
+        
    }
     
 } // namespace opdet
-

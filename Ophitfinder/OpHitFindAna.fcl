@@ -3,13 +3,11 @@ BEGIN_PROLOG
 standard_ophitfindana:
    {
      module_type:            "OpHitFindAna"
-     InputModule:            "ophitspe"   #ophitfinder module
+     InputModule:            "ophitspe"   
      InstanceName:           ""
 
      MakePerOpHitTree:       true
-     MakePerChannelTree:     true
-
-
+     
    }
 
 

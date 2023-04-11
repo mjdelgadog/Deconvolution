@@ -1,5 +1,10 @@
-//
-//=========================================================
+//===========================================================================
+// DecoAnalysis_module.cc
+// This analyzer module for Deconvolution creates histograms
+// with information from OpDetWaveforms and OpWaveforms.
+// @authors     : Daniele Guffanti, Maritza Delgado, Sergio Manthey Corchado
+// @created     : 2022 
+//=========================================================================== 
 
 #ifndef DecoAnalysis_h
 #define DecoAnalysis_h
@@ -52,13 +57,11 @@ namespace opdet {
       void analyze (const art::Event&); 
 
     private:
-      // The stuff below is the part you'll most likely have to change to
-      // go from this custom example to your own task.
       // The parameters we'll read from the .fcl file.
       std::string fInputModuleDeco;          // Input tag for OpDet collection
       std::string fInputModuleDigi;          // Input tag for OpDet collection
       std::string fInstanceName;             // Input tag for OpDet collection
-      double fSampleFreq;                     // in MHz
+      double fSampleFreq;                    // in MHz
       float fTimeBegin;                      // in us
       float fTimeEnd;                        // in us
   };  
@@ -78,8 +81,8 @@ namespace opdet {
     fInputModuleDeco  =   pset.get< std::string >("InputModuleDeco");
     fInputModuleDigi  =   pset.get< std::string >("InputModuleDigi");
     fInstanceName     =   pset.get< std::string >("InstanceName");
+    
     // Obtain parameters from DetectorClocksService
-
     auto const clockData = art::ServiceHandle<detinfo::DetectorClocksService const>()->DataForJob();     
     fSampleFreq = clockData.OpticalClock().Frequency();
 
@@ -96,7 +99,7 @@ namespace opdet {
     // Map to store how many waveforms are on one optical channel
     std::map< int, int > mapChannelWF;
   
-    // Get OpWaveforms from the event
+    // Get deconvolved OpWaveforms from the event
     art::Handle< std::vector< recob::OpWaveform >> deconv;
     evt.getByLabel(fInputModuleDeco, fInstanceName, deconv);
     std::vector< recob::OpWaveform > OpWaveform;
@@ -131,7 +134,8 @@ namespace opdet {
       histName << "event_"      << evt.id().event() 
               << "_opchannel_" << channel
               << "_decowaveform_"  << mapChannelWF[channel]
-              << "_firstwvftime_"  << firstWaveformTime;
+              << "_firstwvftime_"  << firstWaveformTime
+              << "_timestamp_"  << waveform.TimeStamp();
 
       // Increase counter for number of waveforms on this optical channel
       mapChannelWF[channel]++;
@@ -143,6 +147,6 @@ namespace opdet {
         // Fill histogram with waveform                        
         decowaveformHist->SetBinContent(tick, decowaveform.Signal()[tick]);
       }                
-    } // for (auto const& decowaveform : *deconv)                                     
-  } // analyze()
+    }                                      
+  } 
 } // namespace opdet

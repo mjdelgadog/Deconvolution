@@ -1,61 +1,46 @@
 BEGIN_PROLOG
-standard_deconvolution:{
-  module_type:       "Deconvolution"
-  InputModule:       "opdigi"              
-  InstanceName:      ""    
 
-  LineNoiseRMS:      3        # Pedestal RMS in [ADC] counts, likely an underestimate
-  TimeBegin:         0        # In [us] 
-  TimeEnd:           1600     # In [us] 
-  PreTrigger:        100      # In [ticks] 25
-  Pedestal:          1500     # In [ADC]
-  Samples:           1000     # Timewindow in [ticks]
-  Scale:             0.001    # Sacilng of resulting wvfs                     
-  DigiDataFile:      "fbk_decon.txt"    
-  DigiDataColumn:    0
+standard_deconvolution:
+
+ {
   
-  AutoScale:              true   # Scaling based on SPE amp. From template for Wiener Filter 
-  ApplyPostfilter:        true    # Filter the waveforms after deconvolution
-  ApplyPostBLCorrection:  true    # Correct baseline after the deconvolution process
-  PedestalBuffer:          20     # In [ticks], should always be smaller than PreTrigger!
+   module_type:       "Deconvolution"
+   InputModule:       "opdigi"              
+   InstanceName:      ""    
+ 
+   LineNoiseRMS:      3              # Pedestal RMS in [ADC] counts, likely an underestimate
+   PreTrigger:        100            # In [ticks] 
+   Pedestal:          1500           # In [ADC]
+   Samples:           1000           # Timewindow in [ticks]
+   Scale:             0.001          # Scaling of the resulting deconvolved signals.                     
+   SPEDataColumn:     0              # Number of columns that contains the txt file with the SPE template.
+   SPEDataFile:      "fbk_deco.txt"  # Single PE template source file, you can also use "hpk_deco.txt"
+  
+   AutoScale:              true    # Scaling based on the integral of the deconvoluted SPE,
+                                   # If false, it will use the value of Scale. 
+   ApplyPostBLCorrection:  true    # Correct baseline after the deconvolution process.
+   PedestalBuffer:          20     # In [ticks], should always be smaller than PreTrigger!
+  
+   WfmFilter: {
+     Name: "Gauss"                 # Write the name of the filter: "Wiener" or "Gauss"
+     Cutoff: 1.                    # In MHz. The cuttoff is only available for Gauss filter.
+   }
+  
+   ApplyPostfilter:        true    # True to improve deconvoluted signal (noisy signal or improve 
+                                   # deconvolution for lower amplitude signals).
+                                  
+   WfmPostfilter: {                
+     Name: "Gauss"                 # Gaussian postfilter is applied on the deconvoluted signals.
+     Cutoff: 2.8                   # In MHz.
+   }
 
-  WfmPostfilter: {
-    Name: "Gauss"      
-    Cutoff: 2.8              # In MHz
-  }
+  
+ }
 
-  WfmFilter: {
-    Name: "Gauss"            # Write the filter: "Wiener" or "Gauss"
-    Cutoff: 1.
-  }
-}
-
+# If you want to see all the Debug values from this module:
+# "H","S","N", "G0", "G1", "G", "V"...you can write:
 
 deconvolution_snr: @local::standard_deconvolution
 deconvolution_snr.OutputProduct: "SNR"
-
-deconvolution_H: @local::standard_deconvolution
-deconvolution_H.OutputProduct: "H"
-
-deconvolution_S: @local::standard_deconvolution
-deconvolution_S.OutputProduct: "S"
-
-deconvolution_N: @local::standard_deconvolution
-deconvolution_N.OutputProduct: "N"
-
-deconvolution_G0: @local::standard_deconvolution
-deconvolution_G0.OutputProduct: "G0"
-
-deconvolution_G1: @local::standard_deconvolution
-deconvolution_G1.OutputProduct: "G1"
-
-deconvolution_G: @local::standard_deconvolution
-deconvolution_G.OutputProduct: "G"
-
-deconvolution_V: @local::standard_deconvolution
-deconvolution_V.OutputProduct: "V"
-
-deconvolution_v: @local::standard_deconvolution
-deconvolution_v.OutputProduct: "v"
 
 END_PROLOG

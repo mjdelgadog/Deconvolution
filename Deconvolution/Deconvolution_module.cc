@@ -106,8 +106,8 @@ namespace opdet {
           fhicl::Atom<size_t>      PreTrigger{ fhicl::Name("PreTrigger"), 0};
           fhicl::Atom<size_t>      ReadoutWindow{ fhicl::Name("ReadoutWindow"), 1000}; 
           fhicl::Atom<short>       Pedestal{ fhicl::Name("Pedestal"), 1500}; 
-          fhicl::Atom<std::string> DigiDataFile{ fhicl::Name("DigiDataFile") }; 
-          fhicl::Atom<size_t>      DigiDataColumn{ fhicl::Name("DigiDataColumn"), 1 }; 
+          fhicl::Atom<std::string> SPEDataFile{ fhicl::Name("SPEDataFile") }; 
+          fhicl::Atom<size_t>      SPEDataColumn{ fhicl::Name("SPEDataColumn"), 1 }; 
           fhicl::Atom<Int_t>       Samples{ fhicl::Name("Samples"), 1000 };
           fhicl::Atom<Int_t>       PedestalBuffer{ fhicl::Name("PedestalBuffer"), 10 }; 
           fhicl::Atom<Double_t>    Scale{ fhicl::Name("Scale"), 1 }; 
@@ -270,11 +270,12 @@ namespace opdet {
       short  fPedestal;                         //!< In ADC counts
       double  fLineNoiseRMS;                    //!< Pedestal RMS in ADC counts
       size_t fPreTrigger;                       //!< In ticks
-      std::vector<double> fSinglePEWaveform;    //!< Template for a single PE in ADC
-      double fSinglePEAmplitude;                //!< single PE amplitude
-      unsigned int WfDeco;                      //!< nr of waveform processed
-      std::string fDigiDataFile;                //!< single p.e. template source file
-      size_t fDigiDataColumn;                   //!< single p.e. template source file column    
+      std::string fSPEDataFile;                //!< Single PE template source file
+      size_t fSPEDataColumn;                   //!< Single PE template source file column 
+      std::vector<double> fSinglePEWaveform;    //!< Single PE in ADC
+      double fSinglePEAmplitude;                //!< Single PE amplitude for found maximum peak in the Waveform.
+      unsigned int WfDeco;                      //!< Number of waveform processed
+         
       double fScale;                            //!< Scaling of resulting wvfs 
       size_t fReadoutWindow;                    //!< In ticks
       int fSamples;                             //!< (Same as ReadoutWindow?)
@@ -289,13 +290,9 @@ namespace opdet {
       EInputShape fInputShape = kDelta; 
       // EInputShape fInputShape = kScint; 
 
-      
-      //Load TFileService service
-      art::ServiceHandle<art::TFileService> tfs;
-
     private:
       int  CountFileColumns(const char* file_path);
-      void SourceSPEDigiDataFile(); 
+      void SourceSPESPEDataFile(); 
       void BuildExtraFilter(CmplxWaveform_t& xF0, const WfmExtraFilter_t config); 
       void ComputeExpectedInput(std::vector<double>& s, double nmax);
       void CopyToOutput(const std::vector<float>& v, std::vector<float>& target); 
@@ -325,8 +322,8 @@ namespace opdet {
     fLineNoiseRMS{ pars().LineNoiseRMS() },
     fPreTrigger{ pars().PreTrigger()},
 
-    fDigiDataFile{ pars().DigiDataFile()},
-    fDigiDataColumn{ pars().DigiDataColumn()},
+    fSPEDataFile{ pars().SPEDataFile()},
+    fSPEDataColumn{ pars().SPEDataColumn()},
     fScale{ pars().Scale()},
     fReadoutWindow{ pars().ReadoutWindow()},
     fSamples{ pars().Samples()},
@@ -343,9 +340,6 @@ namespace opdet {
     // Declare that we'll produce a vector of OpDetWaveforms 
     WfDeco=0;  
 
-    // auto const *LarProp = lar::providerFrom<detinfo::LArPropertiesService>();
-    art::ServiceHandle< art::TFileService > tfs; 
-
     // This module produces
     produces< std::vector< raw::OpDetWaveform > >();  
     produces< std::vector< recob::OpWaveform> > ();   
@@ -360,7 +354,7 @@ namespace opdet {
     fft_r2c = TVirtualFFT::FFT(1, &fSamples, "M R2C K");
     fft_c2r = TVirtualFFT::FFT(1, &fSamples, "M C2R K");
     
-    SourceSPEDigiDataFile(); 
+    SourceSPESPEDataFile(); 
 
     // build post filter (if required)
     if (fApplyPostfilter) BuildExtraFilter(fxG1, fPostfilterConfig); 
@@ -381,10 +375,7 @@ namespace opdet {
 
     art::Handle< std::vector< raw::OpDetWaveform > > wfHandle;
     evt.getByLabel(fInputModule, fInstanceName, wfHandle);
-    
-    // Access ART's TFileService, which will handle creating and writing
-    art::ServiceHandle< art::TFileService > tfs;
-
+   
     //******************************
     //-- Read Waveform----
     //****************************** 
@@ -424,8 +415,8 @@ namespace opdet {
       CmplxWaveform_t xY(fSamples); 
       CmplxWaveform_t xGH(fSamples); 
       std::vector<float> xSNR(fSamples, 0.); 
-      int OriginalWaveformSize = wf.Waveform().size();
-      //----------------------------------------------------------- Resize wvfs
+      int OriginalWaveformSize = wf.Waveform().size(); 
+      //--------------------Resize deconvoluted signals equal to raw waveforms
       if (static_cast<int>(OriginalWaveformSize) <= fSamples) { 
         out_recob_float.resize(fSamples,0); 
       }
@@ -558,9 +549,9 @@ namespace opdet {
         out_recob_float[i] = (xvdec[i]-decPedestal)*scale;
       }
       
-      //----------------------------------------------------------- Resize wvfs
+      //--------------Resize deconvoluted signals equal to raw waveforms
       if (int(out_recob_float.size()) <= OriginalWaveformSize) { 
-        out_recob_float.resize(OriginalWaveformSize,0); 
+        out_recob_float.resize(OriginalWaveformSize,0);  
       }
 
       else { 
@@ -616,7 +607,7 @@ namespace opdet {
   /**
    * @brief Build a filter to be applied prior the deconvolution
    *
-   * Construct an extra filter to be applied before and/or after 
+   * Construct an extra filter to be applied after 
    * the deconvolution process.
    * Different filters can be implemented by switching the flag 
    * `fPostfilterConfig.fName`
@@ -709,22 +700,22 @@ namespace opdet {
    * @brief Source the single p.e. response from file
    *
    * Source the single p.e. response template from the txt file set by 
-   * `fDigiDataFile` and set the variable `fSinglePEAmplitude` with the 
+   * `fSPEDataFile` and set the variable `fSinglePEAmplitude` with the 
    * amplitude of the single p.e. response. In case of a multi-column
    * template file, the relevant column can be selected by setting the
-   * varible `fDigiDataColumn`.
+   * varible `fSPEDataColumn`.
    */
-  void Deconvolution::SourceSPEDigiDataFile() {
-    size_t n_columns = CountFileColumns(fDigiDataFile.c_str()); 
-    if (fDigiDataColumn >= n_columns) {
+  void Deconvolution::SourceSPESPEDataFile() {
+    size_t n_columns = CountFileColumns(fSPEDataFile.c_str()); 
+    if (fSPEDataColumn >= n_columns) {
       printf("Deconvolution::SourceSPETemplate ERROR: "); 
       printf("The module is supposed to select column %lu, but only %lu columns are present.\n", 
-          fDigiDataColumn, n_columns); 
+          fSPEDataColumn, n_columns); 
       throw art::Exception(art::errors::InvalidNumber); 
     }
 
     std::ifstream SPEData; 
-    SPEData.open(fDigiDataFile); 
+    SPEData.open(fSPEDataFile); 
     Double_t buff[100] = {0};  
 
     std::string temp_str; 
@@ -734,7 +725,7 @@ namespace opdet {
         int  icol = 0; 
         while (ss) {ss >> buff[icol]; ++icol;}
 
-        fSinglePEWaveform.push_back(buff[fDigiDataColumn]);
+        fSinglePEWaveform.push_back(buff[fSPEDataColumn]);
       } 
     } else {
       printf("Deconvolution::produce ERROR "); 

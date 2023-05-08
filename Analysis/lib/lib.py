@@ -1,9 +1,6 @@
 import uproot
 import numpy as np
 
-def scint_profile(x,const,a_f,tau_f,tau_s):
-    return const*(2*a_f/tau_f*np.exp(-(x)/tau_f) + 2*(1-a_f)/tau_s*np.exp(-(x)/tau_s))
-
 def combine_ophit_with_data(data,ophit):
     output = dict()
     output["PE"] = []
